@@ -60,6 +60,14 @@ else()
   target_link_libraries(${PROJECT_NAME}_mapOptimization gtsam "${cpp_typesupport_target}")
 endif()
 
+add_executable(${PROJECT_NAME}_navsat_to_odom src/navsat_to_odom.cpp)
+ament_target_dependencies(${PROJECT_NAME}_navsat_to_odom rclcpp std_msgs sensor_msgs geometry_msgs nav_msgs tf2 tf2_geometry_msgs)
+target_link_libraries(${PROJECT_NAME}_navsat_to_odom "${cpp_typesupport_target}")
+
+add_executable(${PROJECT_NAME}_odom_to_path src/odom_to_path.cpp)
+ament_target_dependencies(${PROJECT_NAME}_odom_to_path rclcpp std_msgs geometry_msgs nav_msgs)
+target_link_libraries(${PROJECT_NAME}_odom_to_path "${cpp_typesupport_target}")
+
 
 install(
   DIRECTORY launch
@@ -88,6 +96,16 @@ install(
 
 install(
   TARGETS ${PROJECT_NAME}_mapOptimization
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
+  TARGETS ${PROJECT_NAME}_navsat_to_odom
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
+  TARGETS ${PROJECT_NAME}_odom_to_path
   DESTINATION lib/${PROJECT_NAME}
 )
 

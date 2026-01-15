@@ -17,7 +17,7 @@ POINT_CLOUD_REGISTER_POINT_STRUCT (VelodynePointXYZIRT,
 struct OusterPointXYZIRT {
     PCL_ADD_POINT4D;
     float intensity;
-    uint32_t t;
+    uint32_t time_stamp;
     uint16_t reflectivity;
     uint8_t ring;
     uint16_t noise;
@@ -26,7 +26,7 @@ struct OusterPointXYZIRT {
 } EIGEN_ALIGN16;
 POINT_CLOUD_REGISTER_POINT_STRUCT(OusterPointXYZIRT,
     (float, x, x) (float, y, y) (float, z, z) (float, intensity, intensity)
-    (uint32_t, t, t) (uint16_t, reflectivity, reflectivity)
+    (uint32_t, time_stamp, time_stamp) (uint16_t, reflectivity, reflectivity)
     (uint8_t, ring, ring) (uint16_t, noise, noise) (uint32_t, range, range)
 )
 
@@ -251,7 +251,8 @@ public:
                 dst.z = src.z;
                 dst.intensity = src.intensity;
                 dst.ring = src.ring;
-                dst.time = src.t * 1e-9f;
+                dst.time = src.time_stamp * 1e-9f;
+                // cout << "Deskew için zaman !!!!!!dst.time= "<<dst.time << endl << endl;
             }
         }
         else
@@ -291,12 +292,12 @@ public:
             }
             if (ringFlag == -1)
             {
-                if (sensor == SensorType::VELODYNE) {
+                // if (sensor == SensorType::VELODYNE) {
                     ringFlag = 2;
-                } else {
-                    RCLCPP_ERROR(get_logger(), "Point cloud ring channel not available, please configure your point cloud data!");
-                    rclcpp::shutdown();
-                }
+                // } else {
+                //     RCLCPP_ERROR(get_logger(), "Point cloud ring channel not available, please configure your point cloud data!");
+                //     rclcpp::shutdown();
+                // }
             }
         }
 
@@ -306,7 +307,7 @@ public:
             deskewFlag = -1;
             for (auto &field : currentCloudMsg.fields)
             {
-                if (field.name == "time" || field.name == "t")
+                if (field.name == "time_stamp" || field.name == "t")
                 {
                     deskewFlag = 1;
                     break;
@@ -529,7 +530,14 @@ public:
             return *point;
 
         double pointTime = timeScanCur + relTime;
+        // cout << "timeScanCur + relTime !!!!PointTime= "<<pointTime << endl << endl;
+        // std::cout << std::fixed << std::setprecision(6)
+        //   << "timeScanCur=" << timeScanCur
+        //   << " relTime=" << relTime
+        //   << " pointTime=" << pointTime
+        //   << std::endl;
 
+        
         float rotXCur, rotYCur, rotZCur;
         findRotation(pointTime, &rotXCur, &rotYCur, &rotZCur);
 

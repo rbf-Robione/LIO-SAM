@@ -2,10 +2,10 @@
   ros__parameters:
 
     # Topics
-    pointCloudTopic: "/sensing/lidar/top/pointcloud_before_sync"                   # Point cloud data
-    imuTopic: "robins/ros/imu"                        # IMU data
+    pointCloudTopic: "/sensing/lidar/top/pointcloud_raw_ex"                   # Point cloud data
+    imuTopic: "/robins/raw/imu"                        # IMU data
     odomTopic: "odometry/imu"                    # IMU pre-preintegration odometry, same frequency as IMU
-    gpsTopic: "robins/ros/gps_nav_sat_fix"                    # GPS odometry topic from navsat, see module_navsat.launch file
+    gpsTopic: "sensing/gnss/robins/ros/gps_odom_null"                    # GPS odometry topic from navsat, see module_navsat.launch file
 
     # Frames
     lidarFrame: "rs_helios_top_base_link"
@@ -25,12 +25,12 @@
 
     # Sensor Settings
     sensor: ouster                               # lidar sensor type, either 'velodyne', 'ouster' or 'livox'
-    N_SCAN: 32                                   # number of lidar channels (i.e., Velodyne/Ouster: 16, 32, 64, 128, Livox Horizon: 6)
-    Horizon_SCAN: 1800                           # lidar horizontal resolution (Velodyne:1800, Ouster:512,1024,2048, Livox Horizon: 4000)
+    N_SCAN: 128                                   # number of lidar channels (i.e., Velodyne/Ouster: 16, 32, 64, 128, Livox Horizon: 6)
+    Horizon_SCAN: 3600                           # lidar horizontal resolution (Velodyne:1800, Ouster:512,1024,2048, Livox Horizon: 4000)
     downsampleRate: 1                            # default: 1. Downsample your data if too many
     # points. i.e., 16 = 64 / 4, 16 = 16 / 1
     lidarMinRange: 1.0                           # default: 1.0, minimum lidar range to be used
-    lidarMaxRange: 1000.0                        # default: 1000.0, maximum lidar range to be used
+    lidarMaxRange: 100.0                        # default: 1000.0, maximum lidar range to be used
 
     # IMU Settings
     imuAccNoise: 3.9939570888238808e-03
@@ -41,13 +41,15 @@
     imuGravity: 9.80511
     imuRPYWeight: 0.01
 
-    extrinsicTrans:  [ 0.0,  0.0,  0.0 ]
-    extrinsicRot:    [-1.0,  0.0,  0.0,
-                       0.0,  1.0,  0.0,
-                       0.0,  0.0, -1.0 ]
-    extrinsicRPY: [ 0.0,  1.0,  0.0,
-                   -1.0,  0.0,  0.0,
-                    0.0,  0.0,  1.0 ]
+    extrinsicTrans:  [ -1.76,  0.0,  -1.311 ]
+    extrinsicRot:    [ 1.0, 0.0, 0.0, 
+                      0.0, 1.0, 0.0, 
+                      0.0, 0.0, 1.0 ]
+    extrinsicRPY: [ 1.0, 0.0, 0.0, 
+                      0.0, 1.0, 0.0, 
+                      0.0, 0.0, 1.0 ]
+
+
 
     # LOAM feature threshold
     edgeThreshold: 1.0
@@ -65,8 +67,8 @@
     rotation_tollerance: 1000.0                   # radians
 
     # CPU Params
-    numberOfCores: 4                              # number of cores for mapping optimization
-    mappingProcessInterval: 0.15                  # seconds, regulate mapping frequency
+    numberOfCores: 8                              # number of cores for mapping optimization
+    mappingProcessInterval: 0.5                  # seconds, regulate mapping frequency
 
     # Surrounding map
     surroundingkeyframeAddingDistThreshold: 1.0   # meters, regulate keyframe adding threshold
