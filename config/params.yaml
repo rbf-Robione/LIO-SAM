@@ -2,10 +2,10 @@
   ros__parameters:
 
     # Topics
-    pointCloudTopic: "/sensing/lidar/top/pointcloud_raw_ex"                   # Point cloud data
+    pointCloudTopic: "/pandar_points"                   # Point cloud data
     imuTopic: "/robins/raw/imu"                        # IMU data
     odomTopic: "odometry/imu"                    # IMU pre-preintegration odometry, same frequency as IMU
-    gpsTopic: "sensing/gnss/robins/ros/gps_odom_null"                    # GPS odometry topic from navsat, see module_navsat.launch file
+    gpsTopic: "robins/ros/odometry"                    # GPS odometry topic from navsat, see module_navsat.launch file
 
     # Frames
     lidarFrame: "rs_helios_top_base_link"
@@ -14,7 +14,7 @@
     mapFrame: "map"
 
     # GPS Settings
-    useImuHeadingInitialization: false           # if using GPS data, set to "true"
+    useImuHeadingInitialization: true           # if using GPS data, set to "true"
     useGpsElevation: false                       # if GPS elevation is bad, set to "false"
     gpsCovThreshold: 2.0                         # m^2, threshold for using GPS data
     poseCovThreshold: 25.0                       # m^2, threshold for using GPS data
@@ -30,7 +30,7 @@
     downsampleRate: 1                            # default: 1. Downsample your data if too many
     # points. i.e., 16 = 64 / 4, 16 = 16 / 1
     lidarMinRange: 1.0                           # default: 1.0, minimum lidar range to be used
-    lidarMaxRange: 100.0                        # default: 1000.0, maximum lidar range to be used
+    lidarMaxRange: 1000.0                        # default: 1000.0, maximum lidar range to be used
 
     # IMU Settings
     imuAccNoise: 3.9939570888238808e-03
