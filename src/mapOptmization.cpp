@@ -170,7 +170,7 @@ public:
             "lio_sam/feature/cloud_info", qos,
             std::bind(&mapOptimization::laserCloudInfoHandler, this, std::placeholders::_1));
         subGPS = create_subscription<nav_msgs::msg::Odometry>(
-            gpsTopic, 200,
+            gpsTopic, rclcpp::QoS(100).best_effort(),
             std::bind(&mapOptimization::gpsHandler, this, std::placeholders::_1));
         subLoop = create_subscription<std_msgs::msg::Float64MultiArray>(
             "lio_loop/loop_closure_detection", qos,
