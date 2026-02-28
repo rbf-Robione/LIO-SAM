@@ -59,9 +59,9 @@
     surfFeatureMinValidNum: 100
 
     # voxel filter paprams
-    odometrySurfLeafSize: 0.4                     # default: 0.4 - outdoor, 0.2 - indoor
-    mappingCornerLeafSize: 0.2                    # default: 0.2 - outdoor, 0.1 - indoor
-    mappingSurfLeafSize: 0.4                      # default: 0.4 - outdoor, 0.2 - indoor
+    odometrySurfLeafSize: 0.2                     # finer odom constraints for sharp turns
+    mappingCornerLeafSize: 0.1                    # finer corner map for better rotation observability
+    mappingSurfLeafSize: 0.2                      # finer surface map for better scan matching
 
     # robot motion constraint (in case you are using a 2D robot)
     z_tollerance: 1000.0                          # meters
@@ -69,11 +69,11 @@
 
     # CPU Params
     numberOfCores: 8                              # number of cores for mapping optimization
-    mappingProcessInterval: 0.5                  # seconds, regulate mapping frequency
+    mappingProcessInterval: 0.15                 # seconds, higher update rate for turn tracking
 
     # Surrounding map
-    surroundingkeyframeAddingDistThreshold: 1.0   # meters, regulate keyframe adding threshold
-    surroundingkeyframeAddingAngleThreshold: 0.2  # radians, regulate keyframe adding threshold
+    surroundingkeyframeAddingDistThreshold: 0.5   # meters, add keyframes more often in turns
+    surroundingkeyframeAddingAngleThreshold: 0.1  # radians, add keyframes more often in turns
     surroundingKeyframeDensity: 2.0               # meters, downsample surrounding keyframe poses   
     surroundingKeyframeSearchRadius: 50.0         # meters, within n meters scan-to-map optimization
     # (when loop closure disabled)
