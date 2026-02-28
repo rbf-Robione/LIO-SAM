@@ -68,8 +68,8 @@
     rotation_tollerance: 1.2                      # radians (limit roll/pitch flips)
 
     # CPU Params
-    numberOfCores: 8                              # number of cores for mapping optimization
-    mappingProcessInterval: 0.15                 # seconds, higher update rate for turn tracking
+    numberOfCores: 12                             # number of cores for mapping optimization
+    mappingProcessInterval: 0.10                 # seconds, higher update rate for turn tracking
 
     # Surrounding map
     surroundingkeyframeAddingDistThreshold: 0.5   # meters, add keyframes more often in turns

@@ -1406,6 +1406,25 @@ public:
         float x, y, z, roll, pitch, yaw;
         pcl::getTranslationAndEulerAngles(transBetween, x, y, z, roll, pitch, yaw);
 
+        if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z) ||
+            !std::isfinite(roll) || !std::isfinite(pitch) || !std::isfinite(yaw))
+            return false;
+
+        float transNorm = sqrt(x*x + y*y + z*z);
+        if (transNorm > 20.0 || abs(roll) > 1.0 || abs(pitch) > 1.0 || abs(yaw) > 1.0)
+        {
+            RCLCPP_WARN(get_logger(), "Rejecting implausible keyframe jump (d=%.2f, rpy=%.2f %.2f %.2f)",
+                        transNorm, roll, pitch, yaw);
+            PointTypePose lastPose = cloudKeyPoses6D->back();
+            transformTobeMapped[0] = lastPose.roll;
+            transformTobeMapped[1] = lastPose.pitch;
+            transformTobeMapped[2] = lastPose.yaw;
+            transformTobeMapped[3] = lastPose.x;
+            transformTobeMapped[4] = lastPose.y;
+            transformTobeMapped[5] = lastPose.z;
+            return false;
+        }
+
         if (abs(roll)  < surroundingkeyframeAddingAngleThreshold &&
             abs(pitch) < surroundingkeyframeAddingAngleThreshold &&
             abs(yaw)   < surroundingkeyframeAddingAngleThreshold &&
