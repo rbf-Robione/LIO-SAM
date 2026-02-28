@@ -104,6 +104,7 @@ public:
     float imuGyrNoise;
     float imuAccBiasN;
     float imuGyrBiasN;
+    float imuRate;
     float imuGravity;
     float imuRPYWeight;
     vector<double> extRotV;
@@ -228,6 +229,8 @@ public:
         get_parameter("imuAccBiasN", imuAccBiasN);
         declare_parameter("imuGyrBiasN", 7e-5);
         get_parameter("imuGyrBiasN", imuGyrBiasN);
+        declare_parameter("imuRate", 500.0);
+        get_parameter("imuRate", imuRate);
         declare_parameter("imuGravity", 9.80511);
         get_parameter("imuGravity", imuGravity);
         declare_parameter("imuRPYWeight", 0.01);

@@ -8,16 +8,16 @@
     gpsTopic: "/applanix/lvx_client/odom"                    # GPS odometry topic from navsat, see module_navsat.launch file
 
     # Frames
-    lidarFrame: "hesai_ot128_top_base_link"
+    lidarFrame: "hesai_ot128_top"
     baselinkFrame: "base_link"
-    odometryFrame: "ned"
+    odometryFrame: "odom"
     mapFrame: "map"
 
     # GPS Settings
-    useImuHeadingInitialization: true           # if using GPS data, set to "true"
-    useGpsElevation: true                       # if GPS elevation is bad, set to "false"
-    gpsCovThreshold: 2.0                         # m^2, threshold for using GPS data
-    poseCovThreshold: 25.0                       # m^2, threshold for using GPS data
+    useImuHeadingInitialization: false          # disable heading fusion while tuning IMU-LiDAR alignment
+    useGpsElevation: false                      # disable GPS Z coupling for stability
+    gpsCovThreshold: 0.01                       # effectively skip GPS factors during debugging
+    poseCovThreshold: 1.0e9                     # effectively skip GPS factors during debugging
 
     # Export settings
     savePCD: false                               # https://github.com/TixiaoShan/LIO-SAM/issues/3
@@ -37,9 +37,10 @@
     imuGyrNoise: 1.5636343949698187e-03
     imuAccBiasN: 6.4356659353532566e-05
     imuGyrBiasN: 3.5640318696367613e-05
+    imuRate: 50.0
 
     imuGravity: 9.80511
-    imuRPYWeight: 0.01
+    imuRPYWeight: 0.0
 
     extrinsicTrans:  [ -0.1,  0.0,  -0.2 ]
     extrinsicRot:    [ 1.0, 0.0, 0.0, 
@@ -64,7 +65,7 @@
 
     # robot motion constraint (in case you are using a 2D robot)
     z_tollerance: 1000.0                          # meters
-    rotation_tollerance: 1000.0                   # radians
+    rotation_tollerance: 1.2                      # radians (limit roll/pitch flips)
 
     # CPU Params
     numberOfCores: 8                              # number of cores for mapping optimization

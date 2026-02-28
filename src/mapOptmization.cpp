@@ -13,6 +13,7 @@
 #include <gtsam/nonlinear/Marginals.h>
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/inference/Symbol.h>
+#include <gtsam/linear/linearExceptions.h>
 
 #include <gtsam/nonlinear/ISAM2.h>
 
@@ -881,7 +882,11 @@ public:
         downSizeFilterSurroundingKeyPoses.filter(*surroundingKeyPosesDS);
         for(auto& pt : surroundingKeyPosesDS->points)
         {
+            if (!std::isfinite(pt.x) || !std::isfinite(pt.y) || !std::isfinite(pt.z))
+                continue;
             kdtreeSurroundingKeyPoses->nearestKSearch(pt, 1, pointSearchInd, pointSearchSqDis);
+            if (pointSearchInd.empty())
+                continue;
             pt.intensity = cloudKeyPoses3D->points[pointSearchInd[0]].intensity;
         }
 
@@ -986,7 +991,11 @@ public:
 
             pointOri = laserCloudCornerLastDS->points[i];
             pointAssociateToMap(&pointOri, &pointSel);
+            if (!std::isfinite(pointSel.x) || !std::isfinite(pointSel.y) || !std::isfinite(pointSel.z))
+                continue;
             kdtreeCornerFromMap->nearestKSearch(pointSel, 5, pointSearchInd, pointSearchSqDis);
+            if (pointSearchSqDis.size() < 5)
+                continue;
 
             cv::Mat matA1(3, 3, CV_32F, cv::Scalar::all(0));
             cv::Mat matD1(1, 3, CV_32F, cv::Scalar::all(0));
@@ -1078,7 +1087,11 @@ public:
 
             pointOri = laserCloudSurfLastDS->points[i];
             pointAssociateToMap(&pointOri, &pointSel); 
+            if (!std::isfinite(pointSel.x) || !std::isfinite(pointSel.y) || !std::isfinite(pointSel.z))
+                continue;
             kdtreeSurfFromMap->nearestKSearch(pointSel, 5, pointSearchInd, pointSearchSqDis);
+            if (pointSearchSqDis.size() < 5)
+                continue;
 
             Eigen::Matrix<float, 5, 3> matA0;
             Eigen::Matrix<float, 5, 1> matB0;
@@ -1260,6 +1273,12 @@ public:
             matX = matP * matX2;
         }
 
+        for (int i = 0; i < 6; ++i)
+        {
+            if (!std::isfinite(matX.at<float>(i, 0)))
+                return true;
+        }
+
         transformTobeMapped[0] += matX.at<float>(0, 0);
         transformTobeMapped[1] += matX.at<float>(1, 0);
         transformTobeMapped[2] += matX.at<float>(2, 0);
@@ -1285,6 +1304,9 @@ public:
     void scan2MapOptimization()
     {
         if (cloudKeyPoses3D->points.empty())
+            return;
+
+        if (laserCloudCornerFromMapDS->empty() || laserCloudSurfFromMapDS->empty())
             return;
 
         if (laserCloudCornerLastDSNum > edgeFeatureMinValidNum && laserCloudSurfLastDSNum > surfFeatureMinValidNum)
@@ -1314,6 +1336,12 @@ public:
 
     void transformUpdate()
     {
+        for (int i = 0; i < 6; ++i)
+        {
+            if (!std::isfinite(transformTobeMapped[i]))
+                return;
+        }
+
         if (cloudInfo.imu_available == true)
         {
             if (std::abs(cloudInfo.imu_pitch_init) < 1.4)
@@ -1340,6 +1368,12 @@ public:
         transformTobeMapped[0] = constraintTransformation(transformTobeMapped[0], rotation_tollerance);
         transformTobeMapped[1] = constraintTransformation(transformTobeMapped[1], rotation_tollerance);
         transformTobeMapped[5] = constraintTransformation(transformTobeMapped[5], z_tollerance);
+
+        for (int i = 0; i < 6; ++i)
+        {
+            if (!std::isfinite(transformTobeMapped[i]))
+                return;
+        }
 
         incrementalOdometryAffineBack = trans2Affine3f(transformTobeMapped);
     }
@@ -1385,7 +1419,8 @@ public:
     {
         if (cloudKeyPoses3D->points.empty())
         {
-            noiseModel::Diagonal::shared_ptr priorNoise = noiseModel::Diagonal::Variances((Vector(6) << 1e-2, 1e-2, M_PI*M_PI, 1e8, 1e8, 1e8).finished()); // rad*rad, meter*meter
+            noiseModel::Diagonal::shared_ptr priorNoise = noiseModel::Diagonal::Variances(
+                (Vector(6) << 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2).finished());
             gtSAMgraph.add(PriorFactor<Pose3>(0, trans2gtsamPose(transformTobeMapped), priorNoise));
             initialEstimate.insert(0, trans2gtsamPose(transformTobeMapped));
         }else{
@@ -1496,9 +1531,75 @@ public:
         aLoopIsClosed = true;
     }
 
+    bool syncKeyframeContainersWithISAM()
+    {
+        try
+        {
+            isamCurrentEstimate = isam->calculateEstimate();
+        }
+        catch (const std::exception& e)
+        {
+            RCLCPP_WARN(get_logger(), "ISAM estimate sync failed: %s", e.what());
+            return false;
+        }
+
+        const int estimateSize = static_cast<int>(isamCurrentEstimate.size());
+        const int poseSize = static_cast<int>(cloudKeyPoses3D->size());
+
+        if (estimateSize <= poseSize)
+            return true;
+
+        RCLCPP_WARN(get_logger(), "Recovering keyframe index mismatch (poses: %d, isam: %d)", poseSize, estimateSize);
+
+        for (int i = poseSize; i < estimateSize; ++i)
+        {
+            Pose3 pose = isamCurrentEstimate.at<Pose3>(i);
+
+            PointType thisPose3D;
+            thisPose3D.x = pose.translation().x();
+            thisPose3D.y = pose.translation().y();
+            thisPose3D.z = pose.translation().z();
+            thisPose3D.intensity = i;
+            cloudKeyPoses3D->push_back(thisPose3D);
+
+            PointTypePose thisPose6D;
+            thisPose6D.x = thisPose3D.x;
+            thisPose6D.y = thisPose3D.y;
+            thisPose6D.z = thisPose3D.z;
+            thisPose6D.intensity = thisPose3D.intensity;
+            thisPose6D.roll  = pose.rotation().roll();
+            thisPose6D.pitch = pose.rotation().pitch();
+            thisPose6D.yaw   = pose.rotation().yaw();
+            thisPose6D.time = timeLaserInfoCur;
+            cloudKeyPoses6D->push_back(thisPose6D);
+
+            pcl::PointCloud<PointType>::Ptr recoveredCorner(new pcl::PointCloud<PointType>());
+            pcl::PointCloud<PointType>::Ptr recoveredSurf(new pcl::PointCloud<PointType>());
+            if (!cornerCloudKeyFrames.empty() && !surfCloudKeyFrames.empty())
+            {
+                pcl::copyPointCloud(*cornerCloudKeyFrames.back(), *recoveredCorner);
+                pcl::copyPointCloud(*surfCloudKeyFrames.back(), *recoveredSurf);
+            }
+            else
+            {
+                pcl::copyPointCloud(*laserCloudCornerLastDS, *recoveredCorner);
+                pcl::copyPointCloud(*laserCloudSurfLastDS, *recoveredSurf);
+            }
+            cornerCloudKeyFrames.push_back(recoveredCorner);
+            surfCloudKeyFrames.push_back(recoveredSurf);
+
+            updatePath(thisPose6D);
+        }
+
+        return true;
+    }
+
     void saveKeyFramesAndFactor()
     {
         if (saveFrame() == false)
+            return;
+
+        if (!syncKeyframeContainersWithISAM())
             return;
 
         // odom factor
@@ -1513,29 +1614,54 @@ public:
         // cout << "****************************************************" << endl;
         // gtSAMgraph.print("GTSAM Graph:\n");
 
-        // update iSAM
-        isam->update(gtSAMgraph, initialEstimate);
-        isam->update();
-
-        if (aLoopIsClosed == true)
-        {
-            isam->update();
-            isam->update();
-            isam->update();
-            isam->update();
-            isam->update();
-        }
-
-        gtSAMgraph.resize(0);
-        initialEstimate.clear();
-
         //save key poses
         PointType thisPose3D;
         PointTypePose thisPose6D;
         Pose3 latestEstimate;
 
-        isamCurrentEstimate = isam->calculateEstimate();
-        latestEstimate = isamCurrentEstimate.at<Pose3>(isamCurrentEstimate.size()-1);
+        try
+        {
+            // update iSAM
+            isam->update(gtSAMgraph, initialEstimate);
+            isam->update();
+
+            if (aLoopIsClosed == true)
+            {
+                isam->update();
+                isam->update();
+                isam->update();
+                isam->update();
+                isam->update();
+            }
+
+            gtSAMgraph.resize(0);
+            initialEstimate.clear();
+
+            isamCurrentEstimate = isam->calculateEstimate();
+            latestEstimate = isamCurrentEstimate.at<Pose3>(isamCurrentEstimate.size()-1);
+        }
+        catch (const gtsam::IndeterminantLinearSystemException& e)
+        {
+            RCLCPP_WARN(get_logger(), "GTSAM indeterminate system near key %lu. Dropping current frame.",
+                        static_cast<unsigned long>(e.nearbyVariable()));
+            gtSAMgraph.resize(0);
+            initialEstimate.clear();
+            aLoopIsClosed = false;
+            return;
+        }
+        catch (const std::exception& e)
+        {
+            RCLCPP_WARN(get_logger(), "GTSAM update exception: %s. Dropping current frame.", e.what());
+            gtSAMgraph.resize(0);
+            initialEstimate.clear();
+            aLoopIsClosed = false;
+
+            std::string errorMsg = e.what();
+            if (errorMsg.find("key already exists") != std::string::npos)
+                syncKeyframeContainersWithISAM();
+
+            return;
+        }
         // cout << "****************************************************" << endl;
         // isamCurrentEstimate.print("Current estimate: ");
 
@@ -1558,7 +1684,15 @@ public:
         // cout << "****************************************************" << endl;
         // cout << "Pose covariance:" << endl;
         // cout << isam->marginalCovariance(isamCurrentEstimate.size()-1) << endl << endl;
-        poseCovariance = isam->marginalCovariance(isamCurrentEstimate.size()-1);
+        try
+        {
+            poseCovariance = isam->marginalCovariance(isamCurrentEstimate.size()-1);
+        }
+        catch (const std::exception& e)
+        {
+            RCLCPP_WARN(get_logger(), "Failed to get marginal covariance: %s", e.what());
+            poseCovariance = Eigen::MatrixXd::Identity(6, 6) * 1e6;
+        }
 
         // save updated transform
         transformTobeMapped[0] = latestEstimate.rotation().roll();
@@ -1635,6 +1769,33 @@ public:
 
     void publishOdometry()
     {
+        static bool hasLastValidTransform = false;
+        static float lastValidTransform[6] = {0, 0, 0, 0, 0, 0};
+
+        bool currentTransformFinite = true;
+        for (int i = 0; i < 6; ++i)
+        {
+            if (!std::isfinite(transformTobeMapped[i]))
+            {
+                currentTransformFinite = false;
+                break;
+            }
+        }
+
+        if (!currentTransformFinite)
+        {
+            if (!hasLastValidTransform)
+                return;
+            for (int i = 0; i < 6; ++i)
+                transformTobeMapped[i] = lastValidTransform[i];
+        }
+        else
+        {
+            for (int i = 0; i < 6; ++i)
+                lastValidTransform[i] = transformTobeMapped[i];
+            hasLastValidTransform = true;
+        }
+
         // Publish odometry for ROS (global)
         nav_msgs::msg::Odometry laserOdometryROS;
         laserOdometryROS.header.stamp = timeLaserInfoStamp;
@@ -1750,7 +1911,6 @@ public:
         }
     }
 };
-
 
 int main(int argc, char** argv)
 {   

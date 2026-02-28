@@ -575,6 +575,9 @@ public:
             thisPoint.z = laserCloudIn->points[i].z;
             thisPoint.intensity = laserCloudIn->points[i].intensity;
 
+            if (!std::isfinite(thisPoint.x) || !std::isfinite(thisPoint.y) || !std::isfinite(thisPoint.z))
+                continue;
+
             float range = pointDistance(thisPoint);
             if (range < lidarMinRange || range > lidarMaxRange)
                 continue;
@@ -618,6 +621,8 @@ public:
                 continue;
 
             thisPoint = deskewPoint(&thisPoint, laserCloudIn->points[i].time);
+            if (!std::isfinite(thisPoint.x) || !std::isfinite(thisPoint.y) || !std::isfinite(thisPoint.z))
+                continue;
 
             rangeMat.at<float>(rowIdn, columnIdn) = range;
 

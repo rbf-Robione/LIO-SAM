@@ -12,6 +12,7 @@
 #include <gtsam/nonlinear/Marginals.h>
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/inference/Symbol.h>
+#include <gtsam/linear/linearExceptions.h>
 
 #include <gtsam/nonlinear/ISAM2.h>
 #include <gtsam_unstable/nonlinear/IncrementalFixedLagSmoother.h>
@@ -108,10 +109,14 @@ public:
             else
                 break;
         }
+        if (imuOdomQueue.empty())
+            return;
         Eigen::Isometry3d imuOdomAffineFront = odom2affine(imuOdomQueue.front());
         Eigen::Isometry3d imuOdomAffineBack = odom2affine(imuOdomQueue.back());
         Eigen::Isometry3d imuOdomAffineIncre = imuOdomAffineFront.inverse() * imuOdomAffineBack;
         Eigen::Isometry3d imuOdomAffineLast = lidarOdomAffine * imuOdomAffineIncre;
+        if (!imuOdomAffineLast.matrix().allFinite())
+            return;
         auto t = tf2::eigenToTransform(imuOdomAffineLast);
         tf2::Stamped<tf2::Transform> tCur;
         tf2::convert(t, tCur);
@@ -127,21 +132,36 @@ public:
         // publish tf
         if(lidarFrame != baselinkFrame)
         {
+            bool tfAvailable = false;
             try
             {
                 tf2::fromMsg(tfBuffer->lookupTransform(
                     lidarFrame, baselinkFrame, rclcpp::Time(0)), lidar2Baselink);
+                tfAvailable = true;
             }
             catch (tf2::TransformException ex)
             {
-                RCLCPP_ERROR(get_logger(), "%s", ex.what());
+                RCLCPP_WARN(get_logger(), "%s", ex.what());
             }
-            tf2::Stamped<tf2::Transform> tb(
-                tCur * lidar2Baselink, tf2_ros::fromMsg(odomMsg->header.stamp), odometryFrame);
-            tCur = tb;
+            if (tfAvailable)
+            {
+                tf2::Stamped<tf2::Transform> tb(
+                    tCur * lidar2Baselink, tf2_ros::fromMsg(odomMsg->header.stamp), odometryFrame);
+                tCur = tb;
+            }
         }
         geometry_msgs::msg::TransformStamped ts;
         tf2::convert(tCur, ts);
+        if (!std::isfinite(ts.transform.translation.x) ||
+            !std::isfinite(ts.transform.translation.y) ||
+            !std::isfinite(ts.transform.translation.z) ||
+            !std::isfinite(ts.transform.rotation.x) ||
+            !std::isfinite(ts.transform.rotation.y) ||
+            !std::isfinite(ts.transform.rotation.z) ||
+            !std::isfinite(ts.transform.rotation.w))
+        {
+            return;
+        }
         ts.child_frame_id = baselinkFrame;
         tfBroadcaster->sendTransform(ts);
 
@@ -300,6 +320,9 @@ public:
         float r_y = odomMsg->pose.pose.orientation.y;
         float r_z = odomMsg->pose.pose.orientation.z;
         float r_w = odomMsg->pose.pose.orientation.w;
+        if (!std::isfinite(p_x) || !std::isfinite(p_y) || !std::isfinite(p_z) ||
+            !std::isfinite(r_x) || !std::isfinite(r_y) || !std::isfinite(r_z) || !std::isfinite(r_w))
+            return;
         bool degenerate = (int)odomMsg->pose.covariance[0] == 1 ? true : false;
         gtsam::Pose3 lidarPose = gtsam::Pose3(gtsam::Rot3::Quaternion(r_w, r_x, r_y, r_z), gtsam::Point3(p_x, p_y, p_z));
 
@@ -337,7 +360,23 @@ public:
             graphValues.insert(V(0), prevVel_);
             graphValues.insert(B(0), prevBias_);
             // optimize once
-            optimizer.update(graphFactors, graphValues);
+            try
+            {
+                optimizer.update(graphFactors, graphValues);
+            }
+            catch (const gtsam::IndeterminantLinearSystemException& e)
+            {
+                RCLCPP_WARN(get_logger(), "IMU init GTSAM indeterminate near key %lu. Resetting preintegration.",
+                            static_cast<unsigned long>(e.nearbyVariable()));
+                resetParams();
+                return;
+            }
+            catch (const std::exception& e)
+            {
+                RCLCPP_WARN(get_logger(), "IMU init GTSAM exception: %s. Resetting preintegration.", e.what());
+                resetParams();
+                return;
+            }
             graphFactors.resize(0);
             graphValues.clear();
 
@@ -373,7 +412,16 @@ public:
             graphValues.insert(V(0), prevVel_);
             graphValues.insert(B(0), prevBias_);
             // optimize once
-            optimizer.update(graphFactors, graphValues);
+            try
+            {
+                optimizer.update(graphFactors, graphValues);
+            }
+            catch (const std::exception& e)
+            {
+                RCLCPP_WARN(get_logger(), "IMU graph reset update exception: %s. Resetting preintegration.", e.what());
+                resetParams();
+                return;
+            }
             graphFactors.resize(0);
             graphValues.clear();
 
@@ -389,7 +437,13 @@ public:
             double imuTime = stamp2Sec(thisImu->header.stamp);
             if (imuTime < currentCorrectionTime - delta_t)
             {
-                double dt = (lastImuT_opt < 0) ? (1.0 / 500.0) : (imuTime - lastImuT_opt);
+                double dt = (lastImuT_opt < 0) ? (1.0 / std::max(imuRate, 1.0f)) : (imuTime - lastImuT_opt);
+                if (!std::isfinite(dt) || dt <= 0)
+                {
+                    lastImuT_opt = imuTime;
+                    imuQueOpt.pop_front();
+                    continue;
+                }
                 imuIntegratorOpt_->integrateMeasurement(
                         gtsam::Vector3(thisImu->linear_acceleration.x, thisImu->linear_acceleration.y, thisImu->linear_acceleration.z),
                         gtsam::Vector3(thisImu->angular_velocity.x,    thisImu->angular_velocity.y,    thisImu->angular_velocity.z), dt);
@@ -417,8 +471,28 @@ public:
         graphValues.insert(V(key), propState_.v());
         graphValues.insert(B(key), prevBias_);
         // optimize
-        optimizer.update(graphFactors, graphValues);
-        optimizer.update();
+        try
+        {
+            optimizer.update(graphFactors, graphValues);
+            optimizer.update();
+        }
+        catch (const gtsam::IndeterminantLinearSystemException& e)
+        {
+            RCLCPP_WARN(get_logger(), "IMU GTSAM indeterminate near key %lu. Resetting preintegration.",
+                        static_cast<unsigned long>(e.nearbyVariable()));
+            graphFactors.resize(0);
+            graphValues.clear();
+            resetParams();
+            return;
+        }
+        catch (const std::exception& e)
+        {
+            RCLCPP_WARN(get_logger(), "IMU GTSAM update exception: %s. Resetting preintegration.", e.what());
+            graphFactors.resize(0);
+            graphValues.clear();
+            resetParams();
+            return;
+        }
         graphFactors.resize(0);
         graphValues.clear();
         // Overwrite the beginning of the preintegration for the next step.
@@ -457,7 +531,7 @@ public:
             {
                 sensor_msgs::msg::Imu *thisImu = &imuQueImu[i];
                 double imuTime = stamp2Sec(thisImu->header.stamp);
-                double dt = (lastImuQT < 0) ? (1.0 / 500.0) :(imuTime - lastImuQT);
+                double dt = (lastImuQT < 0) ? (1.0 / std::max(imuRate, 1.0f)) :(imuTime - lastImuQT);
 
                 imuIntegratorImu_->integrateMeasurement(gtsam::Vector3(thisImu->linear_acceleration.x, thisImu->linear_acceleration.y, thisImu->linear_acceleration.z),
                                                         gtsam::Vector3(thisImu->angular_velocity.x,    thisImu->angular_velocity.y,    thisImu->angular_velocity.z), dt);
@@ -472,6 +546,11 @@ public:
     bool failureDetection(const gtsam::Vector3& velCur, const gtsam::imuBias::ConstantBias& biasCur)
     {
         Eigen::Vector3f vel(velCur.x(), velCur.y(), velCur.z());
+        if (!std::isfinite(vel.x()) || !std::isfinite(vel.y()) || !std::isfinite(vel.z()))
+        {
+            RCLCPP_WARN(get_logger(), "Invalid velocity, reset IMU-preintegration!");
+            return true;
+        }
         if (vel.norm() > 30)
         {
             RCLCPP_WARN(get_logger(), "Large velocity, reset IMU-preintegration!");
@@ -480,6 +559,12 @@ public:
 
         Eigen::Vector3f ba(biasCur.accelerometer().x(), biasCur.accelerometer().y(), biasCur.accelerometer().z());
         Eigen::Vector3f bg(biasCur.gyroscope().x(), biasCur.gyroscope().y(), biasCur.gyroscope().z());
+        if (!std::isfinite(ba.x()) || !std::isfinite(ba.y()) || !std::isfinite(ba.z()) ||
+            !std::isfinite(bg.x()) || !std::isfinite(bg.y()) || !std::isfinite(bg.z()))
+        {
+            RCLCPP_WARN(get_logger(), "Invalid bias, reset IMU-preintegration!");
+            return true;
+        }
         if (ba.norm() > 1.0 || bg.norm() > 1.0)
         {
             RCLCPP_WARN(get_logger(), "Large bias, reset IMU-preintegration!");
@@ -502,8 +587,10 @@ public:
             return;
 
         double imuTime = stamp2Sec(thisImu.header.stamp);
-        double dt = (lastImuT_imu < 0) ? (1.0 / 500.0) : (imuTime - lastImuT_imu);
+        double dt = (lastImuT_imu < 0) ? (1.0 / std::max(imuRate, 1.0f)) : (imuTime - lastImuT_imu);
         lastImuT_imu = imuTime;
+        if (!std::isfinite(dt) || dt <= 0)
+            return;
 
         // integrate this single imu message
         imuIntegratorImu_->integrateMeasurement(gtsam::Vector3(thisImu.linear_acceleration.x, thisImu.linear_acceleration.y, thisImu.linear_acceleration.z),
@@ -529,6 +616,17 @@ public:
         odometry.pose.pose.orientation.y = lidarPose.rotation().toQuaternion().y();
         odometry.pose.pose.orientation.z = lidarPose.rotation().toQuaternion().z();
         odometry.pose.pose.orientation.w = lidarPose.rotation().toQuaternion().w();
+        if (!std::isfinite(odometry.pose.pose.position.x) ||
+            !std::isfinite(odometry.pose.pose.position.y) ||
+            !std::isfinite(odometry.pose.pose.position.z) ||
+            !std::isfinite(odometry.pose.pose.orientation.x) ||
+            !std::isfinite(odometry.pose.pose.orientation.y) ||
+            !std::isfinite(odometry.pose.pose.orientation.z) ||
+            !std::isfinite(odometry.pose.pose.orientation.w))
+        {
+            resetParams();
+            return;
+        }
         
         odometry.twist.twist.linear.x = currentState.velocity().x();
         odometry.twist.twist.linear.y = currentState.velocity().y();
