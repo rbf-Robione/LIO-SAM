@@ -26,8 +26,8 @@
     # Sensor Settings
     sensor: ouster                               # lidar sensor type, either 'velodyne', 'ouster' or 'livox'
     N_SCAN: 128                                   # number of lidar channels (i.e., Velodyne/Ouster: 16, 32, 64, 128, Livox Horizon: 6)
-    Horizon_SCAN: 3600                           # lidar horizontal resolution (Velodyne:1800, Ouster:512,1024,2048, Livox Horizon: 4000)
-    downsampleRate: 1                            # default: 1. Downsample your data if too many
+    Horizon_SCAN: 1024                           # lidar horizontal resolution (Velodyne:1800, Ouster:512,1024,2048, Livox Horizon: 4000)
+    downsampleRate: 2                            # default: 1. Downsample your data if too many
     # points. i.e., 16 = 64 / 4, 16 = 16 / 1
     lidarMinRange: 1.0                           # default: 1.0, minimum lidar range to be used
     lidarMaxRange: 1000.0                        # default: 1000.0, maximum lidar range to be used
@@ -40,7 +40,7 @@
     imuRate: 50.0
 
     imuGravity: 9.80511
-    imuRPYWeight: 0.002
+    imuRPYWeight: 0.01
 
     extrinsicTrans:  [ -0.1,  0.0,  -0.2 ]
     extrinsicRot:    [ 1.0, 0.0, 0.0, 
@@ -59,13 +59,13 @@
     surfFeatureMinValidNum: 100
 
     # voxel filter paprams
-    odometrySurfLeafSize: 0.15                    # finer odom constraints for better local registration
-    mappingCornerLeafSize: 0.08                   # finer corner map for better rotation observability
-    mappingSurfLeafSize: 0.15                     # finer surface map for better scan matching
+    odometrySurfLeafSize: 0.2                    # finer odom constraints for better local registration
+    mappingCornerLeafSize: 0.2                   # finer corner map for better rotation observability
+    mappingSurfLeafSize: 0.2                     # finer surface map for better scan matching
 
     # robot motion constraint (in case you are using a 2D robot)
     z_tollerance: 1000.0                          # meters
-    rotation_tollerance: 1.2                      # radians (limit roll/pitch flips)
+    rotation_tollerance: 1000.0                      # radians (limit roll/pitch flips)
 
     # CPU Params
     numberOfCores: 12                             # number of cores for mapping optimization
