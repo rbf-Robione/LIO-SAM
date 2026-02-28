@@ -14,8 +14,8 @@
     mapFrame: "map"
 
     # GPS Settings
-    useImuHeadingInitialization: false          # disable heading fusion while tuning IMU-LiDAR alignment
-    useGpsElevation: false                      # disable GPS Z coupling for stability
+    useImuHeadingInitialization: true          # disable heading fusion while tuning IMU-LiDAR alignment
+    useGpsElevation: true                      # disable GPS Z coupling for stability
     gpsCovThreshold: 0.01                       # effectively skip GPS factors during debugging
     poseCovThreshold: 1.0e9                     # effectively skip GPS factors during debugging
 
