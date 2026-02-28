@@ -593,9 +593,33 @@ public:
         pcl::getTranslationAndEulerAngles (tCorrect, x, y, z, roll, pitch, yaw);
         gtsam::Pose3 poseFrom = Pose3(Rot3::RzRyRx(roll, pitch, yaw), Point3(x, y, z));
         gtsam::Pose3 poseTo = pclPointTogtsamPose3(copy_cloudKeyPoses6D->points[loopKeyPre]);
+        gtsam::Pose3 relativePose = poseFrom.between(poseTo);
+        gtsam::Point3 relativeTrans = relativePose.translation();
+        gtsam::Vector3 relativeRpy = relativePose.rotation().rpy();
+        double relativeDist = std::sqrt(relativeTrans.x() * relativeTrans.x() +
+                                        relativeTrans.y() * relativeTrans.y() +
+                                        relativeTrans.z() * relativeTrans.z());
+
+        if (!std::isfinite(relativeDist) ||
+            !std::isfinite(relativeRpy.x()) || !std::isfinite(relativeRpy.y()) || !std::isfinite(relativeRpy.z()) ||
+            std::abs(relativeTrans.z()) > 3.0 ||
+            std::abs(relativeRpy.x()) > 0.6 ||
+            std::abs(relativeRpy.y()) > 0.6 ||
+            relativeDist > historyKeyframeSearchRadius)
+        {
+            RCLCPP_WARN(get_logger(),
+                        "Reject loop closure (dist=%.2f, dz=%.2f, rpy=%.2f %.2f %.2f)",
+                        relativeDist, relativeTrans.z(), relativeRpy.x(), relativeRpy.y(), relativeRpy.z());
+            return;
+        }
+
         gtsam::Vector Vector6(6);
         float noiseScore = icp.getFitnessScore();
-        Vector6 << noiseScore, noiseScore, noiseScore, noiseScore, noiseScore, noiseScore;
+        if (!std::isfinite(noiseScore) || noiseScore <= 0)
+            return;
+        float transVar = std::max(noiseScore, 0.2f);
+        float rotVar = std::max(noiseScore, 0.3f);
+        Vector6 << rotVar, rotVar, rotVar, transVar, transVar, transVar;
         noiseModel::Diagonal::shared_ptr constraintNoise = noiseModel::Diagonal::Variances(Vector6);
 
         // Add pose constraint

@@ -40,7 +40,7 @@
     imuRate: 50.0
 
     imuGravity: 9.80511
-    imuRPYWeight: 0.0
+    imuRPYWeight: 0.002
 
     extrinsicTrans:  [ -0.1,  0.0,  -0.2 ]
     extrinsicRot:    [ 1.0, 0.0, 0.0, 
@@ -59,9 +59,9 @@
     surfFeatureMinValidNum: 100
 
     # voxel filter paprams
-    odometrySurfLeafSize: 0.2                     # finer odom constraints for sharp turns
-    mappingCornerLeafSize: 0.1                    # finer corner map for better rotation observability
-    mappingSurfLeafSize: 0.2                      # finer surface map for better scan matching
+    odometrySurfLeafSize: 0.15                    # finer odom constraints for better local registration
+    mappingCornerLeafSize: 0.08                   # finer corner map for better rotation observability
+    mappingSurfLeafSize: 0.15                     # finer surface map for better scan matching
 
     # robot motion constraint (in case you are using a 2D robot)
     z_tollerance: 1000.0                          # meters
@@ -74,21 +74,21 @@
     # Surrounding map
     surroundingkeyframeAddingDistThreshold: 0.5   # meters, add keyframes more often in turns
     surroundingkeyframeAddingAngleThreshold: 0.1  # radians, add keyframes more often in turns
-    surroundingKeyframeDensity: 2.0               # meters, downsample surrounding keyframe poses   
+    surroundingKeyframeDensity: 1.0               # meters, denser local submap for registration quality
     surroundingKeyframeSearchRadius: 50.0         # meters, within n meters scan-to-map optimization
     # (when loop closure disabled)
 
     # Loop closure
     loopClosureEnableFlag: true
-    loopClosureFrequency: 1.0                     # Hz, regulate loop closure constraint add frequency
-    surroundingKeyframeSize: 50                   # submap size (when loop closure enabled)
-    historyKeyframeSearchRadius: 15.0             # meters, key frame that is within n meters from
+    loopClosureFrequency: 0.1                     # Hz, lower loop-closure workload to reduce pauses
+    surroundingKeyframeSize: 40                   # smaller submap for faster ICP during loop closure
+    historyKeyframeSearchRadius: 20.0             # tighter loop candidate radius to avoid false closures
     # current pose will be considerd for loop closure
     historyKeyframeSearchTimeDiff: 30.0           # seconds, key frame that is n seconds older will be
     # considered for loop closure
-    historyKeyframeSearchNum: 25                  # number of hostory key frames will be fused into a
+    historyKeyframeSearchNum: 15                  # fewer history keyframes for faster and safer ICP
     # submap for loop closure
-    historyKeyframeFitnessScore: 0.3              # icp threshold, the smaller the better alignment
+    historyKeyframeFitnessScore: 0.08             # stricter ICP threshold to reject bad loop closures
 
     # Visualization
     globalMapVisualizationSearchRadius: 1000.0    # meters, global map visualization radius
