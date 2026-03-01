@@ -16,7 +16,7 @@
     # GPS Settings
     useImuHeadingInitialization: true          # disable heading fusion while tuning IMU-LiDAR alignment
     useGpsElevation: true                      # disable GPS Z coupling for stability
-    gpsCovThreshold: 0.01                       # effectively skip GPS factors during debugging
+    gpsCovThreshold: 2.0                       # effectively skip GPS factors during debugging
     poseCovThreshold: 1.0e9                     # effectively skip GPS factors during debugging
 
     # Export settings
@@ -42,7 +42,7 @@
     imuGravity: 9.80511
     imuRPYWeight: 0.01
 
-    extrinsicTrans:  [ -0.1,  0.0,  -0.2 ]
+    extrinsicTrans:  [ 4.8314, -0.0260, 3.8294 ]
     extrinsicRot:    [ 1.0, 0.0, 0.0, 
                       0.0, 1.0, 0.0, 
                       0.0, 0.0, 1.0 ]
@@ -53,14 +53,14 @@
 
 
     # LOAM feature threshold
-    edgeThreshold: 1.0
-    surfThreshold: 0.1
-    edgeFeatureMinValidNum: 10
-    surfFeatureMinValidNum: 100
+    edgeThreshold: 0.8
+    surfThreshold: 0.08
+    edgeFeatureMinValidNum: 20
+    surfFeatureMinValidNum: 150
 
     # voxel filter paprams
     odometrySurfLeafSize: 0.2                    # finer odom constraints for better local registration
-    mappingCornerLeafSize: 0.2                   # finer corner map for better rotation observability
+    mappingCornerLeafSize: 0.15                   # finer corner map for better rotation observability
     mappingSurfLeafSize: 0.2                     # finer surface map for better scan matching
 
     # robot motion constraint (in case you are using a 2D robot)
