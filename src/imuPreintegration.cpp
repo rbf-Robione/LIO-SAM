@@ -551,9 +551,13 @@ public:
             RCLCPP_WARN(get_logger(), "Invalid velocity, reset IMU-preintegration!");
             return true;
         }
-        if (vel.norm() > 30)
+        if (vel.norm() > imuFailureVelThreshold)
         {
-            RCLCPP_WARN(get_logger(), "Large velocity, reset IMU-preintegration!");
+            RCLCPP_WARN(
+                get_logger(),
+                "Large velocity (%.3f m/s > %.3f m/s), reset IMU-preintegration!",
+                vel.norm(),
+                imuFailureVelThreshold);
             return true;
         }
 
@@ -565,9 +569,15 @@ public:
             RCLCPP_WARN(get_logger(), "Invalid bias, reset IMU-preintegration!");
             return true;
         }
-        if (ba.norm() > 1.0 || bg.norm() > 1.0)
+        if (ba.norm() > imuFailureAccBiasThreshold || bg.norm() > imuFailureGyrBiasThreshold)
         {
-            RCLCPP_WARN(get_logger(), "Large bias, reset IMU-preintegration!");
+            RCLCPP_WARN(
+                get_logger(),
+                "Large bias (acc=%.6f > %.6f or gyr=%.6f > %.6f), reset IMU-preintegration!",
+                ba.norm(),
+                imuFailureAccBiasThreshold,
+                bg.norm(),
+                imuFailureGyrBiasThreshold);
             return true;
         }
 

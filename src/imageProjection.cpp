@@ -264,11 +264,47 @@ public:
         // get timestamp
         cloudHeader = currentCloudMsg.header;
         timeScanCur = stamp2Sec(cloudHeader.stamp);
-        timeScanEnd = timeScanCur + laserCloudIn->points.back().time;
     
         // remove Nan
         vector<int> indices;
         pcl::removeNaNFromPointCloud(*laserCloudIn, *laserCloudIn, indices);
+
+        if (cropBoxFilterEnabled)
+        {
+            if (cropBoxMin.size() == 4 && cropBoxMax.size() == 4)
+            {
+                pcl::CropBox<PointXYZIRT> cropBoxFilter;
+                cropBoxFilter.setInputCloud(laserCloudIn);
+                cropBoxFilter.setMin(Eigen::Vector4f(
+                    static_cast<float>(cropBoxMin[0]),
+                    static_cast<float>(cropBoxMin[1]),
+                    static_cast<float>(cropBoxMin[2]),
+                    static_cast<float>(cropBoxMin[3])));
+                cropBoxFilter.setMax(Eigen::Vector4f(
+                    static_cast<float>(cropBoxMax[0]),
+                    static_cast<float>(cropBoxMax[1]),
+                    static_cast<float>(cropBoxMax[2]),
+                    static_cast<float>(cropBoxMax[3])));
+                cropBoxFilter.setNegative(cropBoxFilterNegative);
+                cropBoxFilter.filter(*laserCloudIn);
+            }
+            else
+            {
+                RCLCPP_WARN_THROTTLE(
+                    get_logger(),
+                    *get_clock(),
+                    5000,
+                    "cropBoxMin/cropBoxMax must be 4-element arrays [x, y, z, w]; CropBox is skipped.");
+            }
+        }
+
+        if (laserCloudIn->empty())
+        {
+            RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "Point cloud empty after preprocessing.");
+            return false;
+        }
+
+        timeScanEnd = timeScanCur + laserCloudIn->points.back().time;
 
         // check dense flag
         if (laserCloudIn->is_dense == false)

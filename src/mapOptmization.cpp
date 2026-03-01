@@ -1522,6 +1522,23 @@ public:
                 float gps_x = thisGPS.pose.pose.position.x;
                 float gps_y = thisGPS.pose.pose.position.y;
                 float gps_z = thisGPS.pose.pose.position.z;
+
+                float gps_delta_x = gps_x - transformTobeMapped[3];
+                float gps_delta_y = gps_y - transformTobeMapped[4];
+                float gps_delta_z = gps_z - transformTobeMapped[5];
+                float gps_delta_norm = sqrt(gps_delta_x * gps_delta_x + gps_delta_y * gps_delta_y + gps_delta_z * gps_delta_z);
+                if (gps_delta_norm > gpsMaxCorrectionDistance)
+                {
+                    RCLCPP_WARN_THROTTLE(
+                        get_logger(),
+                        *get_clock(),
+                        3000,
+                        "Rejecting far GPS correction (%.2f m > %.2f m). Check gpsTopic frame/origin.",
+                        gps_delta_norm,
+                        gpsMaxCorrectionDistance);
+                    continue;
+                }
+
                 if (!useGpsElevation)
                 {
                     gps_z = transformTobeMapped[5];

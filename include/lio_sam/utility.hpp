@@ -86,6 +86,7 @@ public:
     bool useGpsElevation;
     float gpsCovThreshold;
     float poseCovThreshold;
+    float gpsMaxCorrectionDistance;
 
     // Save pcd
     bool savePCD;
@@ -98,6 +99,10 @@ public:
     int downsampleRate;
     float lidarMinRange;
     float lidarMaxRange;
+    bool cropBoxFilterEnabled;
+    bool cropBoxFilterNegative;
+    vector<double> cropBoxMin;
+    vector<double> cropBoxMax;
 
     // IMU
     float imuAccNoise;
@@ -107,6 +112,9 @@ public:
     float imuRate;
     float imuGravity;
     float imuRPYWeight;
+    float imuFailureVelThreshold;
+    float imuFailureAccBiasThreshold;
+    float imuFailureGyrBiasThreshold;
     vector<double> extRotV;
     vector<double> extRPYV;
     vector<double> extTransV;
@@ -181,6 +189,8 @@ public:
         get_parameter("gpsCovThreshold", gpsCovThreshold);
         declare_parameter("poseCovThreshold", 25.0);
         get_parameter("poseCovThreshold", poseCovThreshold);
+        declare_parameter("gpsMaxCorrectionDistance", 50.0);
+        get_parameter("gpsMaxCorrectionDistance", gpsMaxCorrectionDistance);
 
         declare_parameter("savePCD", false);
         get_parameter("savePCD", savePCD);
@@ -220,6 +230,18 @@ public:
         get_parameter("lidarMinRange", lidarMinRange);
         declare_parameter("lidarMaxRange", 1000.0);
         get_parameter("lidarMaxRange", lidarMaxRange);
+        declare_parameter("cropBoxFilterEnabled", false);
+        get_parameter("cropBoxFilterEnabled", cropBoxFilterEnabled);
+        declare_parameter("cropBoxFilterNegative", true);
+        get_parameter("cropBoxFilterNegative", cropBoxFilterNegative);
+        double cmin[] = {-1.5, -1.0, -2.0, 1.0};
+        std::vector<double> cbMin(cmin, std::end(cmin));
+        declare_parameter("cropBoxMin", cbMin);
+        get_parameter("cropBoxMin", cropBoxMin);
+        double cmax[] = {1.5, 1.0, 2.0, 1.0};
+        std::vector<double> cbMax(cmax, std::end(cmax));
+        declare_parameter("cropBoxMax", cbMax);
+        get_parameter("cropBoxMax", cropBoxMax);
 
         declare_parameter("imuAccNoise", 9e-4);
         get_parameter("imuAccNoise", imuAccNoise);
@@ -235,6 +257,12 @@ public:
         get_parameter("imuGravity", imuGravity);
         declare_parameter("imuRPYWeight", 0.01);
         get_parameter("imuRPYWeight", imuRPYWeight);
+        declare_parameter("imuFailureVelThreshold", 30.0);
+        get_parameter("imuFailureVelThreshold", imuFailureVelThreshold);
+        declare_parameter("imuFailureAccBiasThreshold", 1.0);
+        get_parameter("imuFailureAccBiasThreshold", imuFailureAccBiasThreshold);
+        declare_parameter("imuFailureGyrBiasThreshold", 1.0);
+        get_parameter("imuFailureGyrBiasThreshold", imuFailureGyrBiasThreshold);
 
         double ida[] = { 1.0,  0.0,  0.0,
                          0.0,  1.0,  0.0,

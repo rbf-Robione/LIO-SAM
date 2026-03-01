@@ -17,7 +17,8 @@
     useImuHeadingInitialization: true          # disable heading fusion while tuning IMU-LiDAR alignment
     useGpsElevation: true                      # disable GPS Z coupling for stability
     gpsCovThreshold: 2.0                       # effectively skip GPS factors during debugging
-    poseCovThreshold: 1.0e9                     # effectively skip GPS factors during debugging
+    poseCovThreshold: 25.0                     # enable GPS factors when pose covariance grows
+    gpsMaxCorrectionDistance: 50.0             # reject GPS factor if too far from current map estimate
 
     # Export settings
     savePCD: false                               # https://github.com/TixiaoShan/LIO-SAM/issues/3
@@ -31,6 +32,10 @@
     # points. i.e., 16 = 64 / 4, 16 = 16 / 1
     lidarMinRange: 1.0                           # default: 1.0, minimum lidar range to be used
     lidarMaxRange: 1000.0                        # default: 1000.0, maximum lidar range to be used
+    cropBoxFilterEnabled: true                   # remove points inside the box below (in lidar frame)
+    cropBoxFilterNegative: true                  # true: remove points inside box, false: keep only inside
+    cropBoxMin: [-5.5, -5.2, -4.0, 1.0]         # [x, y, z, w]
+    cropBoxMax: [ 5.5,  5.2,  4.0, 1.0]         # [x, y, z, w]
 
     # IMU Settings
     imuAccNoise: 3.9939570888238808e-03
@@ -41,6 +46,9 @@
 
     imuGravity: 9.80511
     imuRPYWeight: 0.01
+    imuFailureVelThreshold: 1000.0               # m/s, reset IMU preintegration if estimated speed exceeds this
+    imuFailureAccBiasThreshold: 10.0            # accel bias norm threshold for reset
+    imuFailureGyrBiasThreshold: 10.0            # gyro bias norm threshold for reset
 
     extrinsicTrans:  [ 4.8314, -0.0260, 3.8294 ]
     extrinsicRot:    [ 1.0, 0.0, 0.0, 
