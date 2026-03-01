@@ -99,6 +99,7 @@ public:
     int downsampleRate;
     float lidarMinRange;
     float lidarMaxRange;
+    float inputCloudYawOffset;
     bool cropBoxFilterEnabled;
     bool cropBoxFilterNegative;
     vector<double> cropBoxMin;
@@ -230,6 +231,8 @@ public:
         get_parameter("lidarMinRange", lidarMinRange);
         declare_parameter("lidarMaxRange", 1000.0);
         get_parameter("lidarMaxRange", lidarMaxRange);
+        declare_parameter("inputCloudYawOffset", 0.0);
+        get_parameter("inputCloudYawOffset", inputCloudYawOffset);
         declare_parameter("cropBoxFilterEnabled", false);
         get_parameter("cropBoxFilterEnabled", cropBoxFilterEnabled);
         declare_parameter("cropBoxFilterNegative", true);

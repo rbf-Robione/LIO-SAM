@@ -269,6 +269,19 @@ public:
         vector<int> indices;
         pcl::removeNaNFromPointCloud(*laserCloudIn, *laserCloudIn, indices);
 
+        if (std::abs(inputCloudYawOffset) > 1e-6f)
+        {
+            const float cosYaw = std::cos(inputCloudYawOffset);
+            const float sinYaw = std::sin(inputCloudYawOffset);
+            for (auto &point : laserCloudIn->points)
+            {
+                const float x = point.x;
+                const float y = point.y;
+                point.x = cosYaw * x - sinYaw * y;
+                point.y = sinYaw * x + cosYaw * y;
+            }
+        }
+
         if (cropBoxFilterEnabled)
         {
             if (cropBoxMin.size() == 4 && cropBoxMax.size() == 4)
