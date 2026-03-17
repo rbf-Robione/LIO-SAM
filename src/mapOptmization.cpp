@@ -821,11 +821,16 @@ public:
             transformTobeMapped[0] = cloudInfo.imu_roll_init;
             transformTobeMapped[1] = cloudInfo.imu_pitch_init;
             transformTobeMapped[2] = cloudInfo.imu_yaw_init;
+            transformTobeMapped[3] = static_cast<float>(extTrans.x());
+            transformTobeMapped[4] = static_cast<float>(extTrans.y());
+            transformTobeMapped[5] = static_cast<float>(extTrans.z());
 
             if (!useImuHeadingInitialization)
                 transformTobeMapped[2] = 0;
-
-            lastImuTransformation = pcl::getTransformation(0, 0, 0, cloudInfo.imu_roll_init, cloudInfo.imu_pitch_init, cloudInfo.imu_yaw_init); // save imu before return;
+            std::cout << "Initial guess: roll=" << transformTobeMapped[0] << ", pitch=" << transformTobeMapped[1] << ", yaw=" << transformTobeMapped[2] << std::endl;
+            lastImuTransformation = pcl::getTransformation(
+                static_cast<float>(extTrans.x()), static_cast<float>(extTrans.y()), static_cast<float>(extTrans.z()),
+                cloudInfo.imu_roll_init, cloudInfo.imu_pitch_init, cloudInfo.imu_yaw_init); // save imu before return;
             return;
         }
 
@@ -850,7 +855,9 @@ public:
 
                 lastImuPreTransformation = transBack;
 
-                lastImuTransformation = pcl::getTransformation(0, 0, 0, cloudInfo.imu_roll_init, cloudInfo.imu_pitch_init, cloudInfo.imu_yaw_init); // save imu before return;
+                lastImuTransformation = pcl::getTransformation(
+                    static_cast<float>(extTrans.x()), static_cast<float>(extTrans.y()), static_cast<float>(extTrans.z()),
+                    cloudInfo.imu_roll_init, cloudInfo.imu_pitch_init, cloudInfo.imu_yaw_init); // save imu before return;
                 return;
             }
         }
@@ -858,7 +865,9 @@ public:
         // use imu incremental estimation for pose guess (only rotation)
         if (cloudInfo.imu_available == true)
         {
-            Eigen::Affine3f transBack = pcl::getTransformation(0, 0, 0, cloudInfo.imu_roll_init, cloudInfo.imu_pitch_init, cloudInfo.imu_yaw_init);
+            Eigen::Affine3f transBack = pcl::getTransformation(
+                static_cast<float>(extTrans.x()), static_cast<float>(extTrans.y()), static_cast<float>(extTrans.z()),
+                cloudInfo.imu_roll_init, cloudInfo.imu_pitch_init, cloudInfo.imu_yaw_init);
             Eigen::Affine3f transIncre = lastImuTransformation.inverse() * transBack;
 
             Eigen::Affine3f transTobe = trans2Affine3f(transformTobeMapped);
@@ -866,7 +875,9 @@ public:
             pcl::getTranslationAndEulerAngles(transFinal, transformTobeMapped[3], transformTobeMapped[4], transformTobeMapped[5], 
                                                           transformTobeMapped[0], transformTobeMapped[1], transformTobeMapped[2]);
 
-            lastImuTransformation = pcl::getTransformation(0, 0, 0, cloudInfo.imu_roll_init, cloudInfo.imu_pitch_init, cloudInfo.imu_yaw_init); // save imu before return;
+            lastImuTransformation = pcl::getTransformation(
+                static_cast<float>(extTrans.x()), static_cast<float>(extTrans.y()), static_cast<float>(extTrans.z()),
+                cloudInfo.imu_roll_init, cloudInfo.imu_pitch_init, cloudInfo.imu_yaw_init); // save imu before return;
             return;
         }
     }
@@ -1386,6 +1397,14 @@ public:
                 imuQuaternion.setRPY(0, cloudInfo.imu_pitch_init, 0);
                 tf2::Matrix3x3(transformQuaternion.slerp(imuQuaternion, imuWeight)).getRPY(rollMid, pitchMid, yawMid);
                 transformTobeMapped[1] = pitchMid;
+
+                if (useImuHeadingInitialization)
+                {
+                    transformQuaternion.setRPY(0, 0, transformTobeMapped[2]);
+                    imuQuaternion.setRPY(0, 0, cloudInfo.imu_yaw_init);
+                    tf2::Matrix3x3(transformQuaternion.slerp(imuQuaternion, imuWeight)).getRPY(rollMid, pitchMid, yawMid);
+                    transformTobeMapped[2] = yawMid;
+                }
             }
         }
 
@@ -1899,7 +1918,7 @@ public:
             {
                 if (std::abs(cloudInfo.imu_pitch_init) < 1.4)
                 {
-                    double imuWeight = 0.1;
+                    double imuWeight = imuRPYWeight;
                     tf2::Quaternion imuQuaternion;
                     tf2::Quaternion transformQuaternion;
                     double rollMid, pitchMid, yawMid;
@@ -1915,6 +1934,14 @@ public:
                     imuQuaternion.setRPY(0, cloudInfo.imu_pitch_init, 0);
                     tf2::Matrix3x3(transformQuaternion.slerp(imuQuaternion, imuWeight)).getRPY(rollMid, pitchMid, yawMid);
                     pitch = pitchMid;
+
+                    if (useImuHeadingInitialization)
+                    {
+                        transformQuaternion.setRPY(0, 0, yaw);
+                        imuQuaternion.setRPY(0, 0, cloudInfo.imu_yaw_init);
+                        tf2::Matrix3x3(transformQuaternion.slerp(imuQuaternion, imuWeight)).getRPY(rollMid, pitchMid, yawMid);
+                        yaw = yawMid;
+                    }
                 }
             }
             laserOdomIncremental.header.stamp = timeLaserInfoStamp;

@@ -10,7 +10,6 @@ def generate_launch_description():
 
     share_dir = get_package_share_directory('lio_sam')
     parameter_file = LaunchConfiguration('params_file')
-    map_odom_yaw = LaunchConfiguration('map_odom_yaw')
     xacro_path = os.path.join(share_dir, 'config', 'robot.urdf.xacro')
     rviz_config_file = os.path.join(share_dir, 'config', 'rviz2.rviz')
 
@@ -20,29 +19,14 @@ def generate_launch_description():
             share_dir, 'config', 'params.yaml'),
         description='FPath to the ROS2 parameters file to use.')
 
-    map_odom_yaw_declare = DeclareLaunchArgument(
-        'map_odom_yaw',
-        default_value='0.0',
-        description='Yaw (rad) for static transform map->odom.')
-
     print("urdf_file_name : {}".format(xacro_path))
 
     return LaunchDescription([
         params_declare,
-        map_odom_yaw_declare,
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
-            arguments=[
-                '--x', '0.0',
-                '--y', '0.0',
-                '--z', '0.0',
-                '--roll', '0.0',
-                '--pitch', '0.0',
-                '--yaw', map_odom_yaw,
-                '--frame-id', 'map',
-                '--child-frame-id', 'odom'
-            ],
+            arguments='0.0 0.0 0.0 0.0 0.0 0.0 map odom'.split(' '),
             parameters=[parameter_file],
             output='screen'
             ),

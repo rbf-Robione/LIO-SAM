@@ -9,12 +9,11 @@ struct VelodynePointXYZIRT
     float time;
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 } EIGEN_ALIGN16;
-POINT_CLOUD_REGISTER_POINT_STRUCT (VelodynePointXYZIRT,
-    (float, x, x) (float, y, y) (float, z, z) (float, intensity, intensity)
-    (uint16_t, ring, ring) (float, time, time)
-)
+POINT_CLOUD_REGISTER_POINT_STRUCT(VelodynePointXYZIRT,
+                                  (float, x, x)(float, y, y)(float, z, z)(float, intensity, intensity)(uint16_t, ring, ring)(float, time, time))
 
-struct OusterPointXYZIRT {
+struct OusterPointXYZIRT
+{
     PCL_ADD_POINT4D;
     float intensity;
     uint32_t time_stamp;
@@ -25,10 +24,7 @@ struct OusterPointXYZIRT {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 } EIGEN_ALIGN16;
 POINT_CLOUD_REGISTER_POINT_STRUCT(OusterPointXYZIRT,
-    (float, x, x) (float, y, y) (float, z, z) (float, intensity, intensity)
-    (uint32_t, time_stamp, time_stamp) (uint16_t, reflectivity, reflectivity)
-    (uint8_t, ring, ring) (uint16_t, noise, noise) (uint32_t, range, range)
-)
+                                  (float, x, x)(float, y, y)(float, z, z)(float, intensity, intensity)(uint32_t, time_stamp, time_stamp)(uint16_t, reflectivity, reflectivity)(uint8_t, ring, ring)(uint16_t, noise, noise)(uint32_t, range, range))
 
 // Use the Velodyne point format as a common representation
 using PointXYZIRT = VelodynePointXYZIRT;
@@ -38,7 +34,6 @@ const int queueLength = 2000;
 class ImageProjection : public ParamServer
 {
 private:
-
     std::mutex imuLock;
     std::mutex odoLock;
 
@@ -71,8 +66,8 @@ private:
 
     pcl::PointCloud<PointXYZIRT>::Ptr laserCloudIn;
     pcl::PointCloud<OusterPointXYZIRT>::Ptr tmpOusterCloudIn;
-    pcl::PointCloud<PointType>::Ptr   fullCloud;
-    pcl::PointCloud<PointType>::Ptr   extractedCloud;
+    pcl::PointCloud<PointType>::Ptr fullCloud;
+    pcl::PointCloud<PointType>::Ptr extractedCloud;
 
     int ringFlag = 0;
     int deskewFlag;
@@ -90,10 +85,8 @@ private:
 
     vector<int> columnIdnCountVec;
 
-
 public:
-    ImageProjection(const rclcpp::NodeOptions & options) :
-            ParamServer("lio_sam_imageProjection", options), deskewFlag(0)
+    ImageProjection(const rclcpp::NodeOptions &options) : ParamServer("lio_sam_imageProjection", options), deskewFlag(0)
     {
         callbackGroupLidar = create_callback_group(
             rclcpp::CallbackGroupType::MutuallyExclusive);
@@ -140,13 +133,13 @@ public:
         fullCloud.reset(new pcl::PointCloud<PointType>());
         extractedCloud.reset(new pcl::PointCloud<PointType>());
 
-        fullCloud->points.resize(N_SCAN*Horizon_SCAN);
+        fullCloud->points.resize(N_SCAN * Horizon_SCAN);
 
         cloudInfo.start_ring_index.assign(N_SCAN, 0);
         cloudInfo.end_ring_index.assign(N_SCAN, 0);
 
-        cloudInfo.point_col_ind.assign(N_SCAN*Horizon_SCAN, 0);
-        cloudInfo.point_range.assign(N_SCAN*Horizon_SCAN, 0);
+        cloudInfo.point_col_ind.assign(N_SCAN * Horizon_SCAN, 0);
+        cloudInfo.point_range.assign(N_SCAN * Horizon_SCAN, 0);
 
         resetParameters();
     }
@@ -172,7 +165,7 @@ public:
         columnIdnCountVec.assign(N_SCAN, 0);
     }
 
-    ~ImageProjection(){}
+    ~ImageProjection() {}
 
     void imuHandler(const sensor_msgs::msg::Imu::SharedPtr imuMsg)
     {
@@ -184,12 +177,12 @@ public:
         // debug IMU data
         // cout << std::setprecision(6);
         // cout << "IMU acc: " << endl;
-        // cout << "x: " << thisImu.linear_acceleration.x << 
-        //       ", y: " << thisImu.linear_acceleration.y << 
+        // cout << "x: " << thisImu.linear_acceleration.x <<
+        //       ", y: " << thisImu.linear_acceleration.y <<
         //       ", z: " << thisImu.linear_acceleration.z << endl;
         // cout << "IMU gyro: " << endl;
-        // cout << "x: " << thisImu.angular_velocity.x << 
-        //       ", y: " << thisImu.angular_velocity.y << 
+        // cout << "x: " << thisImu.angular_velocity.x <<
+        //       ", y: " << thisImu.angular_velocity.y <<
         //       ", z: " << thisImu.angular_velocity.z << endl;
         // double imuRoll, imuPitch, imuYaw;
         // tf2::Quaternion orientation;
@@ -222,7 +215,7 @@ public:
         resetParameters();
     }
 
-    bool cachePointCloud(const sensor_msgs::msg::PointCloud2::SharedPtr& laserCloudMsg)
+    bool cachePointCloud(const sensor_msgs::msg::PointCloud2::SharedPtr &laserCloudMsg)
     {
         // cache point cloud
         cloudQueue.push_back(*laserCloudMsg);
@@ -234,7 +227,7 @@ public:
         cloudQueue.pop_front();
         if (sensor == SensorType::VELODYNE || sensor == SensorType::LIVOX)
         {
-            pcl::moveFromROSMsg(currentCloudMsg, *laserCloudIn);  
+            pcl::moveFromROSMsg(currentCloudMsg, *laserCloudIn);
         }
         else if (sensor == SensorType::OUSTER)
         {
@@ -264,7 +257,7 @@ public:
         // get timestamp
         cloudHeader = currentCloudMsg.header;
         timeScanCur = stamp2Sec(cloudHeader.stamp);
-    
+
         // remove Nan
         vector<int> indices;
         pcl::removeNaNFromPointCloud(*laserCloudIn, *laserCloudIn, indices);
@@ -342,7 +335,7 @@ public:
             if (ringFlag == -1)
             {
                 // if (sensor == SensorType::VELODYNE) {
-                    ringFlag = 2;
+                ringFlag = 2;
                 // } else {
                 //     RCLCPP_ERROR(get_logger(), "Point cloud ring channel not available, please configure your point cloud data!");
                 //     rclcpp::shutdown();
@@ -413,12 +406,16 @@ public:
             double currentImuTime = stamp2Sec(thisImuMsg.header.stamp);
 
             // get roll, pitch, and yaw estimation for this scan
-            if (currentImuTime <= timeScanCur)
+            std::cout << "currentImuTime: " << currentImuTime << " timeScanCur: " << timeScanCur << " seconds" << std::endl;
+            if (currentImuTime <= timeScanCur + 1.0)
+            {
                 imuRPY2rosRPY(&thisImuMsg, &cloudInfo.imu_roll_init, &cloudInfo.imu_pitch_init, &cloudInfo.imu_yaw_init);
+            }
             if (currentImuTime > timeScanEnd + 0.01)
                 break;
 
-            if (imuPointerCur == 0){
+            if (imuPointerCur == 0)
+            {
                 imuRotX[0] = 0;
                 imuRotY[0] = 0;
                 imuRotZ[0] = 0;
@@ -432,10 +429,10 @@ public:
             imuAngular2rosAngular(&thisImuMsg, &angular_x, &angular_y, &angular_z);
 
             // integrate rotation
-            double timeDiff = currentImuTime - imuTime[imuPointerCur-1];
-            imuRotX[imuPointerCur] = imuRotX[imuPointerCur-1] + angular_x * timeDiff;
-            imuRotY[imuPointerCur] = imuRotY[imuPointerCur-1] + angular_y * timeDiff;
-            imuRotZ[imuPointerCur] = imuRotZ[imuPointerCur-1] + angular_z * timeDiff;
+            double timeDiff = currentImuTime - imuTime[imuPointerCur - 1];
+            imuRotX[imuPointerCur] = imuRotX[imuPointerCur - 1] + angular_x * timeDiff;
+            imuRotY[imuPointerCur] = imuRotY[imuPointerCur - 1] + angular_y * timeDiff;
+            imuRotZ[imuPointerCur] = imuRotZ[imuPointerCur - 1] + angular_z * timeDiff;
             imuTime[imuPointerCur] = currentImuTime;
             ++imuPointerCur;
         }
@@ -532,7 +529,9 @@ public:
 
     void findRotation(double pointTime, float *rotXCur, float *rotYCur, float *rotZCur)
     {
-        *rotXCur = 0; *rotYCur = 0; *rotZCur = 0;
+        *rotXCur = 0;
+        *rotYCur = 0;
+        *rotZCur = 0;
 
         int imuPointerFront = 0;
         while (imuPointerFront < imuPointerCur)
@@ -547,7 +546,9 @@ public:
             *rotXCur = imuRotX[imuPointerFront];
             *rotYCur = imuRotY[imuPointerFront];
             *rotZCur = imuRotZ[imuPointerFront];
-        } else {
+        }
+        else
+        {
             int imuPointerBack = imuPointerFront - 1;
             double ratioFront = (pointTime - imuTime[imuPointerBack]) / (imuTime[imuPointerFront] - imuTime[imuPointerBack]);
             double ratioBack = (imuTime[imuPointerFront] - pointTime) / (imuTime[imuPointerFront] - imuTime[imuPointerBack]);
@@ -559,7 +560,9 @@ public:
 
     void findPosition(double relTime, float *posXCur, float *posYCur, float *posZCur)
     {
-        *posXCur = 0; *posYCur = 0; *posZCur = 0;
+        *posXCur = 0;
+        *posYCur = 0;
+        *posZCur = 0;
 
         // If the sensor moves relatively slow, like walking speed, positional deskew seems to have little benefits. Thus code below is commented.
 
@@ -586,7 +589,6 @@ public:
         //   << " pointTime=" << pointTime
         //   << std::endl;
 
-        
         float rotXCur, rotYCur, rotZCur;
         findRotation(pointTime, &rotXCur, &rotYCur, &rotZCur);
 
@@ -604,9 +606,9 @@ public:
         Eigen::Affine3f transBt = transStartInverse * transFinal;
 
         PointType newPoint;
-        newPoint.x = transBt(0,0) * point->x + transBt(0,1) * point->y + transBt(0,2) * point->z + transBt(0,3);
-        newPoint.y = transBt(1,0) * point->x + transBt(1,1) * point->y + transBt(1,2) * point->z + transBt(1,3);
-        newPoint.z = transBt(2,0) * point->x + transBt(2,1) * point->y + transBt(2,2) * point->z + transBt(2,3);
+        newPoint.x = transBt(0, 0) * point->x + transBt(0, 1) * point->y + transBt(0, 2) * point->z + transBt(0, 3);
+        newPoint.y = transBt(1, 0) * point->x + transBt(1, 1) * point->y + transBt(1, 2) * point->z + transBt(1, 3);
+        newPoint.z = transBt(2, 0) * point->x + transBt(2, 1) * point->y + transBt(2, 2) * point->z + transBt(2, 3);
         newPoint.intensity = point->intensity;
 
         return newPoint;
@@ -633,10 +635,11 @@ public:
 
             int rowIdn = laserCloudIn->points[i].ring;
             // if sensor is a velodyne (ringFlag = 2) calculate rowIdn based on number of scans
-            if (ringFlag == 2) { 
+            if (ringFlag == 2)
+            {
                 float verticalAngle =
                     atan2(thisPoint.z,
-                        sqrt(thisPoint.x * thisPoint.x + thisPoint.y * thisPoint.y)) *
+                          sqrt(thisPoint.x * thisPoint.x + thisPoint.y * thisPoint.y)) *
                     180 / M_PI;
                 rowIdn = (verticalAngle + (N_SCAN - 1)) / 2.0;
             }
@@ -651,8 +654,8 @@ public:
             if (sensor == SensorType::VELODYNE || sensor == SensorType::OUSTER)
             {
                 float horizonAngle = atan2(thisPoint.x, thisPoint.y) * 180 / M_PI;
-                static float ang_res_x = 360.0/float(Horizon_SCAN);
-                columnIdn = -round((horizonAngle-90.0)/ang_res_x) + Horizon_SCAN/2;
+                static float ang_res_x = 360.0 / float(Horizon_SCAN);
+                columnIdn = -round((horizonAngle - 90.0) / ang_res_x) + Horizon_SCAN / 2;
                 if (columnIdn >= Horizon_SCAN)
                     columnIdn -= Horizon_SCAN;
             }
@@ -661,7 +664,6 @@ public:
                 columnIdn = columnIdnCountVec[rowIdn];
                 columnIdnCountVec[rowIdn] += 1;
             }
-
 
             if (columnIdn < 0 || columnIdn >= Horizon_SCAN)
                 continue;
@@ -689,31 +691,31 @@ public:
             cloudInfo.start_ring_index[i] = count - 1 + 5;
             for (int j = 0; j < Horizon_SCAN; ++j)
             {
-                if (rangeMat.at<float>(i,j) != FLT_MAX)
+                if (rangeMat.at<float>(i, j) != FLT_MAX)
                 {
                     // mark the points' column index for marking occlusion later
                     cloudInfo.point_col_ind[count] = j;
                     // save range info
-                    cloudInfo.point_range[count] = rangeMat.at<float>(i,j);
+                    cloudInfo.point_range[count] = rangeMat.at<float>(i, j);
                     // save extracted cloud
-                    extractedCloud->push_back(fullCloud->points[j + i*Horizon_SCAN]);
+                    extractedCloud->push_back(fullCloud->points[j + i * Horizon_SCAN]);
                     // size of extracted cloud
                     ++count;
                 }
             }
-            cloudInfo.end_ring_index[i] = count -1 - 5;
+            cloudInfo.end_ring_index[i] = count - 1 - 5;
         }
     }
-    
+
     void publishClouds()
     {
         cloudInfo.header = cloudHeader;
-        cloudInfo.cloud_deskewed  = publishCloud(pubExtractedCloud, extractedCloud, cloudHeader.stamp, lidarFrame);
+        cloudInfo.cloud_deskewed = publishCloud(pubExtractedCloud, extractedCloud, cloudHeader.stamp, lidarFrame);
         pubLaserCloudInfo->publish(cloudInfo);
     }
 };
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
 
