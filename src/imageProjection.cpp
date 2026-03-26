@@ -302,7 +302,7 @@ public:
         }
 
         // check point time
-        if (deskewFlag == 0)
+        if (enableDeskew && deskewFlag == 0)
         {
             deskewFlag = -1;
             for (auto &field : currentCloudMsg.fields)
@@ -324,6 +324,13 @@ public:
     {
         std::lock_guard<std::mutex> lock1(imuLock);
         std::lock_guard<std::mutex> lock2(odoLock);
+
+        if (!enableDeskew)
+        {
+            cloudInfo.imu_available = false;
+            odomDeskewInfo();
+            return true;
+        }
 
         // make sure IMU data available for the scan
         if (imuQueue.empty() ||
@@ -526,6 +533,9 @@ public:
 
     PointType deskewPoint(PointType *point, double relTime)
     {
+        if (!enableDeskew)
+            return *point;
+
         if (deskewFlag == -1 || cloudInfo.imu_available == false)
             return *point;
 

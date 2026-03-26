@@ -98,6 +98,7 @@ public:
     int downsampleRate;
     float lidarMinRange;
     float lidarMaxRange;
+    bool enableDeskew;
 
     // IMU
     float imuAccNoise;
@@ -219,6 +220,8 @@ public:
         get_parameter("lidarMinRange", lidarMinRange);
         declare_parameter("lidarMaxRange", 1000.0);
         get_parameter("lidarMaxRange", lidarMaxRange);
+        declare_parameter("enableDeskew", true);
+        get_parameter("enableDeskew", enableDeskew);
 
         declare_parameter("imuAccNoise", 9e-4);
         get_parameter("imuAccNoise", imuAccNoise);

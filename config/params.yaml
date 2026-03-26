@@ -31,6 +31,7 @@
     # points. i.e., 16 = 64 / 4, 16 = 16 / 1
     lidarMinRange: 1.0                           # default: 1.0, minimum lidar range to be used
     lidarMaxRange: 1000.0                        # default: 1000.0, maximum lidar range to be used
+    enableDeskew: false
 
     # IMU Settings
     imuAccNoise: 3.9939570888238808e-03
