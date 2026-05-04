@@ -2,8 +2,8 @@
   ros__parameters:
 
     # Topics
-    pointCloudTopic: "/sensing/lidar/top/pointcloud_raw_ex"       # Point cloud data
-    imuTopic: "/applanix/lvx_client/imu_raw"                        # IMU data
+    pointCloudTopic: "/sensing/lidar/top_front/pointcloud_raw_ex"       # Point cloud data
+    imuTopic: "/sensing/gnss/robins/ros/imu"                        # IMU data
     odomTopic: "odometry/imu"                    # IMU pre-preintegration odometry, same frequency as IMU
     gpsTopic: "/applanix/lvx_client/odom"                    # GPS odometry topic from navsat, see module_navsat.launch file
 
@@ -15,7 +15,7 @@
 
     # GPS Settings
     useImuHeadingInitialization: true          # disable heading fusion while tuning IMU-LiDAR alignment
-    useGpsElevation: true                      # disable GPS Z coupling for stability
+    useGpsElevation: false                      # disable GPS Z coupling for stability
     gpsCovThreshold: 2.0                       # effectively skip GPS factors during debugging
     poseCovThreshold: 1.e09                     # enable GPS factors when pose covariance grows
     gpsMaxCorrectionDistance: 50.0             # reject GPS factor if too far from current map estimate
@@ -26,8 +26,8 @@
 
     # Sensor Settings
     sensor: velodyne                               # lidar sensor type, either 'velodyne', 'ouster' or 'livox'
-    N_SCAN: 128                                   # number of lidar channels (i.e., Velodyne/Ouster: 16, 32, 64, 128, Livox Horizon: 6)
-    Horizon_SCAN: 3600                           # lidar horizontal resolution (Velodyne:1800, Ouster:512,1024,2048, Livox Horizon: 4000)
+    N_SCAN: 32                                   # number of lidar channels (i.e., Velodyne/Ouster: 16, 32, 64, 128, Livox Horizon: 6)
+    Horizon_SCAN: 1800                           # lidar horizontal resolution (Velodyne:1800, Ouster:512,1024,2048, Livox Horizon: 4000)
     downsampleRate: 1                            # default: 1. Downsample your data if too many
     # points. i.e., 16 = 64 / 4, 16 = 16 / 1
     lidarMinRange: 1.0                           # default: 1.0, minimum lidar range to be used
@@ -46,19 +46,19 @@
 
     imuRate: 50.0
 
-    imuGravity: 0.1
-    imuRPYWeight: 0.1
+    imuGravity: 9.8
+    imuRPYWeight: 0.0
     imuFailureVelThreshold: 1000.0               # m/s, reset IMU preintegration if estimated speed exceeds this
     imuFailureAccBiasThreshold: 10.0            # accel bias norm threshold for reset
     imuFailureGyrBiasThreshold: 10.0            # gyro bias norm threshold for reset
 
     extrinsicTrans:  [ 0.0, 0.0, 0.0 ]
-    extrinsicRot:    [ 0.0, -1.0, 0.0,
-              -1.0, 0.0, 0.0,
-               0.0, 0.0, -1.0 ]
-    extrinsicRPY:    [ 0.0, -1.0, 0.0,
-              -1.0, 0.0, 0.0,
-               0.0, 0.0, -1.0 ]
+    extrinsicRot:    [ 1.0, 0.0, 0.0, 
+                      0.0, 1.0, 0.0, 
+                      0.0, 0.0, 1.0 ]
+    extrinsicRPY: [ 1.0, 0.0, 0.0, 
+                      0.0, 1.0, 0.0, 
+                      0.0, 0.0, 1.0 ]
 
 
 
