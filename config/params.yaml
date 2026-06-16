@@ -2,13 +2,13 @@
   ros__parameters:
 
     # Topics
-    pointCloudTopic: "/lidar_points"                   # Point cloud data
+    pointCloudTopic: "/sensing/lidar/top/pointcloud_raw_ex_filtered"                   # Point cloud data
     imuTopic: "/robins/raw/imu"                        # IMU data
     odomTopic: "odometry/imu"                    # IMU pre-preintegration odometry, same frequency as IMU
     gpsTopic: "/robins/ros/odometry"                    # GPS odometry topic from navsat, see module_navsat.launch file
 
     # Frames
-    lidarFrame: "rs_helios_top_base_link"
+    lidarFrame: "hesai_ot128_top_base_link"
     baselinkFrame: "base_link"
     odometryFrame: "odom"
     mapFrame: "map"
@@ -26,7 +26,7 @@
     # Sensor Settings
     sensor: ouster                               # lidar sensor type, either 'velodyne', 'ouster' or 'livox'
     N_SCAN: 128                                   # number of lidar channels (i.e., Velodyne/Ouster: 16, 32, 64, 128, Livox Horizon: 6)
-    Horizon_SCAN: 3600                           # lidar horizontal resolution (Velodyne:1800, Ouster:512,1024,2048, Livox Horizon: 4000)
+    Horizon_SCAN: 2048                           # lidar horizontal resolution (Velodyne:1800, Ouster:512,1024,2048, Livox Horizon: 4000)
     downsampleRate: 1                            # default: 1. Downsample your data if too many
     # points. i.e., 16 = 64 / 4, 16 = 16 / 1
     lidarMinRange: 1.0                           # default: 1.0, minimum lidar range to be used
@@ -42,15 +42,13 @@
     imuGravity: 9.80511
     imuRPYWeight: 0.01
 
-    extrinsicTrans:  [ -0.0144,  -0.00105,  0.095 ]
-    extrinsicRot:    [ 1.0, 0.0, 0.0, 
-                      0.0, 1.0, 0.0, 
+    extrinsicTrans:  [ -0.087382, -0.045422, -0.188986]
+    extrinsicRot:    [ 1.0, 0.0, 0.0,
+                      0.0, 1.0, 0.0,
                       0.0, 0.0, 1.0 ]
-    extrinsicRPY: [ 1.0, 0.0, 0.0, 
-                      0.0, 1.0, 0.0, 
+    extrinsicRPY: [ 1.0, 0.0, 0.0,
+                      0.0, 1.0, 0.0,
                       0.0, 0.0, 1.0 ]
-
-
 
     # LOAM feature threshold
     edgeThreshold: 1.0

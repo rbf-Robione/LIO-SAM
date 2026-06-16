@@ -1,6 +1,7 @@
 #include "utility.hpp"
 #include "lio_sam/msg/cloud_info.hpp"
 #include "lio_sam/srv/save_map.hpp"
+#include <filesystem>
 #include <gtsam/geometry/Rot3.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/slam/PriorFactor.h>
@@ -183,8 +184,15 @@ public:
             cout << "Saving map to pcd files ..." << endl;
             if(req->destination.empty()) saveMapDirectory = std::getenv("HOME") + savePCDDirectory;
             else saveMapDirectory = std::getenv("HOME") + req->destination;
+            if (!std::filesystem::exists(saveMapDirectory)) {
+                cout << "Error: directory does not exist: " << saveMapDirectory << endl;
+                cout << "Please call the service again with a valid destination path." << endl;
+                res->success = false;
+                return;
+            }
+            saveMapDirectory = saveMapDirectory + "/lio-sam";
             cout << "Save destination: " << saveMapDirectory << endl;
-            // create directory and remove old files;
+            // create lio-sam subdirectory and remove old files inside it;
             int unused = system((std::string("exec rm -r ") + saveMapDirectory).c_str());
             unused = system((std::string("mkdir -p ") + saveMapDirectory).c_str());
             // save key frame transformations
