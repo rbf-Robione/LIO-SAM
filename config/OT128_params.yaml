@@ -1,36 +1,43 @@
 /**:
   ros__parameters:
 
+
     # Topics
-    pointCloudTopic: "/pandar_points"                   # Point cloud data
-    imuTopic: "/robins/raw/imu"                        # IMU data
+    pointCloudTopic: "/lidar_points"                   # Point cloud data
+    imuTopic: "/lidar_imu"                        # IMU data
     odomTopic: "odometry/imu"                    # IMU pre-preintegration odometry, same frequency as IMU
     gpsTopic: "robins/ros/odometry"                    # GPS odometry topic from navsat, see module_navsat.launch file
 
     # Frames
-    lidarFrame: "rs_helios_top_base_link"
+    lidarFrame: "rs_helios_top_base_link"                        # LiDAR frame, should match the child link in your URDF
     baselinkFrame: "base_link"
     odometryFrame: "odom"
     mapFrame: "map"
 
     # GPS Settings
-    useImuHeadingInitialization: true           # if using GPS data, set to "true"
-    useGpsElevation: false                       # if GPS elevation is bad, set to "false"
-    gpsCovThreshold: 2.0                         # m^2, threshold for using GPS data
-    poseCovThreshold: 25.0                       # m^2, threshold for using GPS data
+    useImuHeadingInitialization: true          # disable heading fusion while tuning IMU-LiDAR alignment
+    useGpsElevation: true                      # disable GPS Z coupling for stability
+    gpsCovThreshold: 2.0                       # effectively skip GPS factors during debugging
+    poseCovThreshold: 1.e09                     # enable GPS factors when pose covariance grows
+    gpsMaxCorrectionDistance: 50.0             # reject GPS factor if too far from current map estimate
 
     # Export settings
     savePCD: false                               # https://github.com/TixiaoShan/LIO-SAM/issues/3
     savePCDDirectory: "/Downloads/LOAM/"         # in your home folder, starts and ends with "/". Warning: the code deletes "LOAM" folder then recreates it. See "mapOptimization" for implementation
 
     # Sensor Settings
-    sensor: ouster                               # lidar sensor type, either 'velodyne', 'ouster' or 'livox'
+    sensor: velodyne                               # lidar sensor type, either 'velodyne', 'ouster' or 'livox'
     N_SCAN: 128                                   # number of lidar channels (i.e., Velodyne/Ouster: 16, 32, 64, 128, Livox Horizon: 6)
     Horizon_SCAN: 3600                           # lidar horizontal resolution (Velodyne:1800, Ouster:512,1024,2048, Livox Horizon: 4000)
     downsampleRate: 1                            # default: 1. Downsample your data if too many
     # points. i.e., 16 = 64 / 4, 16 = 16 / 1
     lidarMinRange: 1.0                           # default: 1.0, minimum lidar range to be used
-    lidarMaxRange: 1000.0                        # default: 1000.0, maximum lidar range to be used
+    lidarMaxRange: 150.0                        # default: 1000.0, maximum lidar range to be used
+    inputCloudYawOffset: 0.0             # rad, rotate incoming lidar cloud around Z (110 deg)
+    cropBoxFilterEnabled: true                   # remove points inside the box below (in lidar frame)
+    cropBoxFilterNegative: true                  # true: remove points inside box, false: keep only inside
+    cropBoxMin: [-5.5, -5.2, -4.0, 1.0]         # [x, y, z, w]
+    cropBoxMax: [ 5.5,  5.2,  4.0, 1.0]         # [x, y, z, w]
 
     # IMU Settings
     imuAccNoise: 3.9939570888238808e-03
@@ -38,37 +45,42 @@
     imuAccBiasN: 6.4356659353532566e-05
     imuGyrBiasN: 3.5640318696367613e-05
 
-    imuGravity: 9.80511
-    imuRPYWeight: 0.01
+    imuRate: 100.0
 
-    extrinsicTrans:  [ -1.76,  0.0,  -1.311 ]
-    extrinsicRot:    [ 1.0, 0.0, 0.0, 
-                      0.0, 1.0, 0.0, 
-                      0.0, 0.0, 1.0 ]
-    extrinsicRPY: [ 1.0, 0.0, 0.0, 
-                      0.0, 1.0, 0.0, 
-                      0.0, 0.0, 1.0 ]
+    imuGravity: 9.8
+    imuRPYWeight: 0.01
+    imuFailureVelThreshold: 1000.0               # m/s, reset IMU preintegration if estimated speed exceeds this
+    imuFailureAccBiasThreshold: 10.0            # accel bias norm threshold for reset
+    imuFailureGyrBiasThreshold: 10.0            # gyro bias norm threshold for reset
+
+    extrinsicTrans:  [ 0.0, 0.0, 0.0 ]
+    extrinsicRot:    [ 1.0, 0.0, 0.0,
+                      0.0, 1.0, 0.0,
+                       0.0, 0.0, 1.0 ]
+    extrinsicRPY:    [ 1.0, 0.0, 0.0,
+                      0.0, 1.0, 0.0,
+                       0.0, 0.0, 1.0 ]
 
 
 
     # LOAM feature threshold
-    edgeThreshold: 1.0
-    surfThreshold: 0.1
-    edgeFeatureMinValidNum: 10
+    edgeThreshold: 0.6
+    surfThreshold: 0.12
+    edgeFeatureMinValidNum: 12
     surfFeatureMinValidNum: 100
 
     # voxel filter paprams
-    odometrySurfLeafSize: 0.4                     # default: 0.4 - outdoor, 0.2 - indoor
-    mappingCornerLeafSize: 0.2                    # default: 0.2 - outdoor, 0.1 - indoor
-    mappingSurfLeafSize: 0.4                      # default: 0.4 - outdoor, 0.2 - indoor
+    odometrySurfLeafSize: 0.4                    # finer odom constraints for better local registration
+    mappingCornerLeafSize: 0.2                   # finer corner map for better rotation observability
+    mappingSurfLeafSize: 0.4                     # finer surface map for better scan matching
 
     # robot motion constraint (in case you are using a 2D robot)
     z_tollerance: 1000.0                          # meters
-    rotation_tollerance: 1000.0                   # radians
+    rotation_tollerance: 1000.0                      # radians (limit roll/pitch flips)
 
     # CPU Params
-    numberOfCores: 8                              # number of cores for mapping optimization
-    mappingProcessInterval: 0.5                  # seconds, regulate mapping frequency
+    numberOfCores: 12                             # number of cores for mapping optimization
+    mappingProcessInterval: 0.10                 # seconds, higher update rate for turn tracking
 
     # Surrounding map
     surroundingkeyframeAddingDistThreshold: 1.0   # meters, regulate keyframe adding threshold
