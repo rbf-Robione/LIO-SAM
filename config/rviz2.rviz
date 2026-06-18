@@ -11,6 +11,7 @@ Panels:
         - /MarkerArray1
         - /PointCloud22
         - /PointCloud22/Topic1
+        - /DetectedObjects1
       Splitter Ratio: 0.35384616255760193
     Tree Height: 821
   - Class: rviz_common/Selection
@@ -50,8 +51,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 24.340970993041992
-        Min Value: -15.574870109558105
+        Max Value: 25.224302291870117
+        Min Value: -1.7078742980957031
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -278,6 +279,75 @@ Visualization Manager:
       CYCLIST:
         Alpha: 0.9990000128746033
         Color: 119; 11; 32
+      Class: autoware_perception_rviz_plugin/TrackedObjects
+      Confidence Interval: 95%
+      Display Acceleration: true
+      Display Existence Probability: false
+      Display Indicator: false
+      Display Label: true
+      Display Mesh: false
+      Display Pose Covariance: true
+      Display Predicted Path Confidence: true
+      Display Predicted Paths: true
+      Display Twist: true
+      Display Twist Covariance: false
+      Display UUID: true
+      Display Velocity: true
+      Display Yaw Covariance: false
+      Display Yaw Rate: false
+      Display Yaw Rate Covariance: false
+      Dynamic Status: All
+      Enabled: true
+      HAZARD:
+        Alpha: 0.9990000128746033
+        Color: 255; 69; 0
+      Line Width: 0.029999999329447746
+      MOTORCYCLE:
+        Alpha: 0.9990000128746033
+        Color: 119; 11; 32
+      Name: TrackedObjects
+      Namespaces:
+        acceleration: true
+        label: true
+        position covariance: true
+        shape: true
+        twist: true
+        uuid: true
+        velocity: true
+      Object Fill Type: skeleton
+      PEDESTRIAN:
+        Alpha: 0.9990000128746033
+        Color: 255; 192; 203
+      Polygon Type: 3d
+      TRAILER:
+        Alpha: 0.9990000128746033
+        Color: 30; 144; 255
+      TRUCK:
+        Alpha: 0.9990000128746033
+        Color: 30; 144; 255
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /perception/tracked_objects
+      UNKNOWN:
+        Alpha: 0.9990000128746033
+        Color: 255; 255; 255
+      Value: true
+      Visualization Type: Normal
+    - ANIMAL:
+        Alpha: 0.9990000128746033
+        Color: 255; 105; 180
+      BUS:
+        Alpha: 0.9990000128746033
+        Color: 30; 144; 255
+      CAR:
+        Alpha: 0.9990000128746033
+        Color: 30; 144; 255
+      CYCLIST:
+        Alpha: 0.9990000128746033
+        Color: 119; 11; 32
       Class: autoware_perception_rviz_plugin/DetectedObjects
       Confidence Interval: 95%
       Display Acceleration: true
@@ -326,7 +396,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /objects
+        Value: /perception/detected_objects
       UNKNOWN:
         Alpha: 0.9990000128746033
         Color: 255; 255; 255
@@ -378,25 +448,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 142.68260192871094
+      Distance: 115.5006332397461
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0
-        Y: 0
-        Z: 0
+        X: -27.767269134521484
+        Y: 2.2051711082458496
+        Z: 0.0241293553262949
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.47039806842803955
+      Pitch: 1.5697963237762451
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.5903979539871216
+      Yaw: 0.36039814352989197
     Saved: ~
 Window Geometry:
   Displays:
