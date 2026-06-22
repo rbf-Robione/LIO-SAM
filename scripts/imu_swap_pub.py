@@ -46,7 +46,7 @@ class ImuSwapNode(Node):
         # 🔁 Roll ↔ Pitch
         roll_new = pitch
         pitch_new = roll
-        yaw_new = -yaw   # aynen kalsın
+        yaw_new = -yaw   # keep as-is
 
         # RPY -> Quaternion
         q_new = tft.quaternion_from_euler(
@@ -55,7 +55,7 @@ class ImuSwapNode(Node):
             yaw_new
         )
 
-        # Yeni IMU mesajı
+        # New IMU message
         out = Imu()
         out.header = msg.header
         out.header.frame_id = msg.header.frame_id
@@ -65,7 +65,7 @@ class ImuSwapNode(Node):
         out.orientation.z = q_new[2]
         out.orientation.w = q_new[3]
 
-        # Diğer alanları aynen geçir
+        # Pass other fields through unchanged
         out.angular_velocity = msg.angular_velocity
         out.angular_velocity_covariance = msg.angular_velocity_covariance
 

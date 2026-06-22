@@ -252,7 +252,7 @@ public:
                 dst.intensity = src.intensity;
                 dst.ring = src.ring;
                 dst.time = src.time_stamp * 1e-9f;
-                // cout << "Deskew için zaman !!!!!!dst.time= "<<dst.time << endl << endl;
+                // cout << "Deskew timestamp !!!!!!dst.time= "<<dst.time << endl << endl;
             }
         }
         else

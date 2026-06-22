@@ -1,62 +1,62 @@
 # NavSatFix to Odometry Converter
 
-Bu node, `sensor_msgs/NavSatFix` (GPS) mesajlarını `nav_msgs/Odometry` mesajlarına çevirir.
+This node converts `sensor_msgs/NavSatFix` (GPS) messages into `nav_msgs/Odometry` messages.
 
-## Özellikler
+## Features
 
-- GPS koordinatlarını (lat/lon/alt) yerel Kartezyen koordinatlara (x/y/z) dönüştürür
-- İlk GPS fix'ini otomatik olarak origin (başlangıç noktası) olarak kullanır
-- WGS84 elipsoid modelini kullanarak hassas dönüşüm yapar
-- GPS covariance bilgisini odometry covariance'ına aktarır
-- Pozisyon değişiminden hız tahmini yapar
-- GPS fix kalitesini kontrol eder
+- Converts GPS coordinates (lat/lon/alt) to local Cartesian coordinates (x/y/z)
+- Automatically uses the first GPS fix as the origin
+- Performs accurate conversion using the WGS84 ellipsoid model
+- Forwards GPS covariance to odometry covariance
+- Estimates velocity from position differences
+- Validates GPS fix quality
 
-## Kullanım
+## Usage
 
-### Node'u başlatma
+### Starting the node
 
 ```bash
-# ROS 2 workspace'i source et
+# Source the ROS 2 workspace
 source install/setup.bash
 
-# Node'u başlat
+# Run the node
 ros2 run lio_sam lio_sam_navsat_to_odom
 ```
 
-### Launch dosyası ile başlatma
+### Starting with a launch file
 
 ```bash
 ros2 launch lio_sam navsat_to_odom.launch.py
 ```
 
-## Parametreler
+## Parameters
 
-| Parametre | Tip | Varsayılan | Açıklama |
-|-----------|-----|------------|----------|
-| `input_topic` | string | `/gps/fix` | GPS mesajlarının alınacağı topic |
-| `output_topic` | string | `/gps/odometry` | Odometry mesajlarının yayınlanacağı topic |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `input_topic` | string | `/gps/fix` | Topic to receive GPS messages from |
+| `output_topic` | string | `/gps/odometry` | Topic to publish odometry messages to |
 | `frame_id` | string | `odom` | Odometry frame ID |
 | `child_frame_id` | string | `base_link` | Child frame ID |
-| `use_first_fix_as_origin` | bool | `true` | İlk GPS fix'i origin olarak kullan |
+| `use_first_fix_as_origin` | bool | `true` | Use the first GPS fix as origin |
 
-## Topic'ler
+## Topics
 
 ### Subscribe
-- `input_topic` (`sensor_msgs/NavSatFix`): GPS fix mesajları
+- `input_topic` (`sensor_msgs/NavSatFix`): GPS fix messages
 
 ### Publish
-- `output_topic` (`nav_msgs/Odometry`): Dönüştürülmüş odometry mesajları
+- `output_topic` (`nav_msgs/Odometry`): Converted odometry messages
 
-## Koordinat Sistemi
+## Coordinate System
 
-Node, GPS koordinatlarını ENU (East-North-Up) koordinat sistemine çevirir:
-- **X**: Doğu yönü (East)
-- **Y**: Kuzey yönü (North)  
-- **Z**: Yukarı yönü (Up)
+The node converts GPS coordinates to the ENU (East-North-Up) coordinate system:
+- **X**: East direction
+- **Y**: North direction
+- **Z**: Up direction
 
-## Örnekler
+## Examples
 
-### Özel parametrelerle çalıştırma
+### Running with custom parameters
 
 ```bash
 ros2 run lio_sam lio_sam_navsat_to_odom --ros-args \
@@ -66,19 +66,19 @@ ros2 run lio_sam lio_sam_navsat_to_odom --ros-args \
   -p child_frame_id:=gps_link
 ```
 
-### Topic'leri görüntüleme
+### Viewing topics
 
 ```bash
-# GPS mesajlarını göster
+# Show GPS messages
 ros2 topic echo /gps/fix
 
-# Odometry mesajlarını göster
+# Show odometry messages
 ros2 topic echo /gps/odometry
 ```
 
-## Notlar
+## Notes
 
-- Node, ilk geçerli GPS fix'ini origin olarak kullanır
-- GPS fix kalitesi `STATUS_FIX` veya daha iyi olmalıdır
-- Hız hesaplaması basit türev yaklaşımı kullanır (1 saniyeden kısa zaman aralıkları için)
-- Oryantasyon bilgisi GPS'te olmadığı için identity quaternion kullanılır
+- The node uses the first valid GPS fix as the origin
+- GPS fix quality must be `STATUS_FIX` or better
+- Velocity is computed via simple finite differencing (only for intervals shorter than 1 second)
+- An identity quaternion is used for orientation since GPS provides no heading information
