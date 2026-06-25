@@ -1,10 +1,6 @@
 #include "utility.hpp"
 #include "lio_sam/msg/cloud_info.hpp"
 #include "lio_sam/srv/save_map.hpp"
-#include <filesystem>
-#include <ctime>
-#include <iomanip>
-#include <sstream>
 #include <gtsam/geometry/Rot3.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/slam/PriorFactor.h>
@@ -187,17 +183,7 @@ public:
             cout << "Saving map to pcd files ..." << endl;
             if(req->destination.empty()) saveMapDirectory = std::getenv("HOME") + savePCDDirectory;
             else saveMapDirectory = std::getenv("HOME") + req->destination;
-            // Create base directory if it doesn't exist
-            std::filesystem::create_directories(saveMapDirectory);
-            // Append timestamped liosam subfolder
-            {
-                auto now = std::time(nullptr);
-                std::tm tm_now{};
-                localtime_r(&now, &tm_now);
-                std::ostringstream ts;
-                ts << std::put_time(&tm_now, "%Y%m%d_%H%M%S");
-                saveMapDirectory = saveMapDirectory + "/liosam_" + ts.str();
-            }
+            saveMapDirectory = saveMapDirectory + "/lio_sam";
             cout << "Save destination: " << saveMapDirectory << endl;
             int unused = system((std::string("mkdir -p ") + saveMapDirectory).c_str());
             // save key frame transformations

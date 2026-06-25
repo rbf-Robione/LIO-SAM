@@ -19,10 +19,38 @@ def generate_launch_description():
             share_dir, 'config', 'params.yaml'),
         description='FPath to the ROS2 parameters file to use.')
 
+    imu_topic_arg = DeclareLaunchArgument(
+        'imuTopic',
+        default_value='/robins/raw/imu',
+        description='IMU topic')
+
+    pc_topic_arg = DeclareLaunchArgument(
+        'pointCloudTopic',
+        default_value='/perception/filtered_pointcloud',
+        description='Point cloud topic')
+
+    odom_topic_arg = DeclareLaunchArgument(
+        'odomTopic',
+        default_value='odometry/imu',
+        description='IMU pre-integration odometry topic')
+
+    imu_topic = LaunchConfiguration('imuTopic')
+    pc_topic = LaunchConfiguration('pointCloudTopic')
+    odom_topic = LaunchConfiguration('odomTopic')
+
+    topic_overrides = {
+        'imuTopic': imu_topic,
+        'pointCloudTopic': pc_topic,
+        'odomTopic': odom_topic,
+    }
+
     print("urdf_file_name : {}".format(xacro_path))
 
     return LaunchDescription([
         params_declare,
+        imu_topic_arg,
+        pc_topic_arg,
+        odom_topic_arg,
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
@@ -43,28 +71,28 @@ def generate_launch_description():
             package='lio_sam',
             executable='lio_sam_imuPreintegration',
             name='lio_sam_imuPreintegration',
-            parameters=[parameter_file],
+            parameters=[parameter_file, topic_overrides],
             output='screen'
         ),
         Node(
             package='lio_sam',
             executable='lio_sam_imageProjection',
             name='lio_sam_imageProjection',
-            parameters=[parameter_file],
+            parameters=[parameter_file, topic_overrides],
             output='screen'
         ),
         Node(
             package='lio_sam',
             executable='lio_sam_featureExtraction',
             name='lio_sam_featureExtraction',
-            parameters=[parameter_file],
+            parameters=[parameter_file, topic_overrides],
             output='screen'
         ),
         Node(
             package='lio_sam',
             executable='lio_sam_mapOptimization',
             name='lio_sam_mapOptimization',
-            parameters=[parameter_file],
+            parameters=[parameter_file, topic_overrides],
             output='screen'
         ),
         Node(
