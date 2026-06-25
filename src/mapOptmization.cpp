@@ -2,6 +2,9 @@
 #include "lio_sam/msg/cloud_info.hpp"
 #include "lio_sam/srv/save_map.hpp"
 #include <filesystem>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 #include <gtsam/geometry/Rot3.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/slam/PriorFactor.h>
@@ -184,17 +187,19 @@ public:
             cout << "Saving map to pcd files ..." << endl;
             if(req->destination.empty()) saveMapDirectory = std::getenv("HOME") + savePCDDirectory;
             else saveMapDirectory = std::getenv("HOME") + req->destination;
-            if (!std::filesystem::exists(saveMapDirectory)) {
-                cout << "Error: directory does not exist: " << saveMapDirectory << endl;
-                cout << "Please call the service again with a valid destination path." << endl;
-                res->success = false;
-                return;
+            // Create base directory if it doesn't exist
+            std::filesystem::create_directories(saveMapDirectory);
+            // Append timestamped liosam subfolder
+            {
+                auto now = std::time(nullptr);
+                std::tm tm_now{};
+                localtime_r(&now, &tm_now);
+                std::ostringstream ts;
+                ts << std::put_time(&tm_now, "%Y%m%d_%H%M%S");
+                saveMapDirectory = saveMapDirectory + "/liosam_" + ts.str();
             }
-            saveMapDirectory = saveMapDirectory + "/lio-sam";
             cout << "Save destination: " << saveMapDirectory << endl;
-            // create lio-sam subdirectory and remove old files inside it;
-            int unused = system((std::string("exec rm -r ") + saveMapDirectory).c_str());
-            unused = system((std::string("mkdir -p ") + saveMapDirectory).c_str());
+            int unused = system((std::string("mkdir -p ") + saveMapDirectory).c_str());
             // save key frame transformations
             pcl::io::savePCDFileBinary(saveMapDirectory + "/trajectory.pcd", *cloudKeyPoses3D);
             pcl::io::savePCDFileBinary(saveMapDirectory + "/transformations.pcd", *cloudKeyPoses6D);
