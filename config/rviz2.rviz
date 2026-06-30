@@ -51,8 +51,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 25.224302291870117
-        Min Value: -1.7078742980957031
+        Max Value: 22.22226905822754
+        Min Value: -19.171031951904297
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -89,19 +89,11 @@ Visualization Manager:
         All Enabled: true
         base_link:
           Value: true
-        chassis_link:
-          Value: true
         hesai_ot128_top_base_link:
-          Value: true
-        imu_link:
-          Value: true
-        laser_sensor_frame:
           Value: true
         lidar_link:
           Value: true
         map:
-          Value: true
-        navsat_link:
           Value: true
         odom:
           Value: true
@@ -114,12 +106,6 @@ Visualization Manager:
         map:
           odom:
             base_link:
-              chassis_link:
-                imu_link:
-                  laser_sensor_frame:
-                    {}
-                navsat_link:
-                  {}
               hesai_ot128_top_base_link:
                 {}
             lidar_link:
@@ -158,7 +144,8 @@ Visualization Manager:
       Enabled: true
       Name: MarkerArray
       Namespaces:
-        {}
+        loop_edges: true
+        loop_nodes: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -307,13 +294,7 @@ Visualization Manager:
         Color: 119; 11; 32
       Name: TrackedObjects
       Namespaces:
-        acceleration: true
-        label: true
-        position covariance: true
-        shape: true
-        twist: true
-        uuid: true
-        velocity: true
+        {}
       Object Fill Type: skeleton
       PEDESTRIAN:
         Alpha: 0.9990000128746033
@@ -375,11 +356,7 @@ Visualization Manager:
         Color: 119; 11; 32
       Name: DetectedObjects
       Namespaces:
-        label: true
-        position covariance: true
-        shape: true
-        twist: true
-        velocity: true
+        {}
       Object Fill Type: skeleton
       PEDESTRIAN:
         Alpha: 0.9990000128746033
@@ -448,25 +425,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 115.5006332397461
+      Distance: 28.002010345458984
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -27.767269134521484
-        Y: 2.2051711082458496
-        Z: 0.0241293553262949
+        X: 0.8766041994094849
+        Y: 0.4033876955509186
+        Z: 1.7378852367401123
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
       Pitch: 1.5697963237762451
-      Target Frame: <Fixed Frame>
+      Target Frame: base_link
       Value: Orbit (rviz)
-      Yaw: 0.36039814352989197
+      Yaw: 0.11039642244577408
     Saved: ~
 Window Geometry:
   Displays:
