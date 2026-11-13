@@ -147,6 +147,8 @@ public:
     float historyKeyframeSearchTimeDiff;
     int   historyKeyframeSearchNum;
     float historyKeyframeFitnessScore;
+    float loopClosureInlierDistance;
+    float loopClosureMinInlierRatio;
 
     // global map visualization radius
     float globalMapVisualizationSearchRadius;
@@ -301,8 +303,12 @@ public:
         get_parameter("historyKeyframeSearchTimeDiff", historyKeyframeSearchTimeDiff);
         declare_parameter("historyKeyframeSearchNum", 25);
         get_parameter("historyKeyframeSearchNum", historyKeyframeSearchNum);
-        declare_parameter("historyKeyframeFitnessScore", 0.3);
+        declare_parameter("historyKeyframeFitnessScore", 0.1);
         get_parameter("historyKeyframeFitnessScore", historyKeyframeFitnessScore);
+        declare_parameter("loopClosureInlierDistance", 1.0);
+        get_parameter("loopClosureInlierDistance", loopClosureInlierDistance);
+        declare_parameter("loopClosureMinInlierRatio", 0.5);
+        get_parameter("loopClosureMinInlierRatio", loopClosureMinInlierRatio);
 
         declare_parameter("globalMapVisualizationSearchRadius", 1000.0);
         get_parameter("globalMapVisualizationSearchRadius", globalMapVisualizationSearchRadius);
@@ -364,6 +370,37 @@ double stamp2Sec(const T& stamp)
 {
     return rclcpp::Time(stamp).seconds();
 }
+
+// Rejects IMU messages whose header stamp is not strictly increasing.
+// GTSAM's PreintegratedImuMeasurements::integrateMeasurement throws on dt <= 0,
+// which aborts imuPreintegration, and imageProjection's deskew would integrate a
+// negative interval. Seen with the Robins INS: one message stamped 50 ms ahead,
+// followed by messages behind it. Dropping until stamps increase again costs a
+// few IMU samples. A large backward time jump (e.g. replaying a bag without
+// restarting the nodes) keeps every message dropped; restart LIO-SAM then.
+class ImuStampFilter
+{
+public:
+    bool accept(const builtin_interfaces::msg::Time& stamp)
+    {
+        const int64_t t = rclcpp::Time(stamp).nanoseconds();
+        if (has_last_ && t <= last_ns_)
+        {
+            ++dropped_;
+            return false;
+        }
+        last_ns_ = t;
+        has_last_ = true;
+        return true;
+    }
+    double lastSec() const { return last_ns_ * 1e-9; }
+    uint64_t dropped() const { return dropped_; }
+
+private:
+    int64_t last_ns_ = 0;
+    bool has_last_ = false;
+    uint64_t dropped_ = 0;
+};
 
 
 template<typename T>

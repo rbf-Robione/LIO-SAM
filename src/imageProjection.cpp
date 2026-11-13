@@ -65,6 +65,8 @@ private:
     double *imuRotY = new double[queueLength];
     double *imuRotZ = new double[queueLength];
 
+    ImuStampFilter imuStampFilter;
+
     int imuPointerCur;
     bool firstPointFlag;
     Eigen::Affine3f transStartInverse;
@@ -176,6 +178,15 @@ public:
 
     void imuHandler(const sensor_msgs::msg::Imu::SharedPtr imuMsg)
     {
+        if (!imuStampFilter.accept(imuMsg->header.stamp))
+        {
+            RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 1000,
+                "Dropping IMU message with non-increasing stamp %.6f (last accepted %.6f), %lu dropped so far",
+                stamp2Sec(imuMsg->header.stamp), imuStampFilter.lastSec(),
+                static_cast<unsigned long>(imuStampFilter.dropped()));
+            return;
+        }
+
         sensor_msgs::msg::Imu thisImu = imuConverter(*imuMsg);
 
         std::lock_guard<std::mutex> lock1(imuLock);

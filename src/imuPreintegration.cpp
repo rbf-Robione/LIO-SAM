@@ -210,6 +210,8 @@ public:
     double lastImuT_imu = -1;
     double lastImuT_opt = -1;
 
+    ImuStampFilter imuStampFilter;
+
     gtsam::ISAM2 optimizer;
     gtsam::NonlinearFactorGraph graphFactors;
     gtsam::Values graphValues;
@@ -492,6 +494,15 @@ public:
     void imuHandler(const sensor_msgs::msg::Imu::SharedPtr imu_raw)
     {
         std::lock_guard<std::mutex> lock(mtx);
+
+        if (!imuStampFilter.accept(imu_raw->header.stamp))
+        {
+            RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 1000,
+                "Dropping IMU message with non-increasing stamp %.6f (last accepted %.6f), %lu dropped so far",
+                stamp2Sec(imu_raw->header.stamp), imuStampFilter.lastSec(),
+                static_cast<unsigned long>(imuStampFilter.dropped()));
+            return;
+        }
 
         sensor_msgs::msg::Imu thisImu = imuConverter(*imu_raw);
 

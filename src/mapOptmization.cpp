@@ -178,6 +178,7 @@ public:
 
         auto saveMapService = [this](const std::shared_ptr<rmw_request_id_t> request_header, const std::shared_ptr<lio_sam::srv::SaveMap::Request> req, std::shared_ptr<lio_sam::srv::SaveMap::Response> res) -> void {
             (void)request_header;
+            flushPendingLoopFactors();
             string saveMapDirectory;
             cout << "****************************************************" << endl;
             cout << "Saving map to pcd files ..." << endl;
@@ -555,22 +556,85 @@ public:
                 publishCloud(pubHistoryKeyFrames, prevKeyframeCloud, timeLaserInfoStamp, odometryFrame);
         }
 
+        // A rejected pair is retried every cycle while no new keyframe arrives (vehicle
+        // stopped, bag finished); the result would be identical, so skip it.
+        static std::pair<int, int> lastRejectedPair(-1, -1);
+        if (lastRejectedPair == std::make_pair(loopKeyCur, loopKeyPre))
+            return;
+
         // ICP Settings
         static pcl::IterativeClosestPoint<PointType, PointType> icp;
-        icp.setMaxCorrespondenceDistance(historyKeyframeSearchRadius*2);
         icp.setMaximumIterations(100);
         icp.setTransformationEpsilon(1e-6);
         icp.setEuclideanFitnessEpsilon(1e-6);
         icp.setRANSACIterations(0);
-
-        // Align clouds
         icp.setInputSource(cureKeyframeCloud);
         icp.setInputTarget(prevKeyframeCloud);
         pcl::PointCloud<PointType>::Ptr unused_result(new pcl::PointCloud<PointType>());
-        icp.align(*unused_result);
 
-        if (icp.hasConverged() == false || icp.getFitnessScore() > historyKeyframeFitnessScore)
+        // Coarse-to-fine: the wide window tolerates the drift accumulated around the loop,
+        // the narrow ones make the constraint accurate instead of an average over
+        // mismatched neighbours.
+        const float corrDistances[] = {historyKeyframeSearchRadius * 2.0f,
+                                       loopClosureInlierDistance * 3.0f,
+                                       loopClosureInlierDistance};
+        Eigen::Matrix4f icpGuess = Eigen::Matrix4f::Identity();
+        for (float corrDistance : corrDistances)
+        {
+            icp.setMaxCorrespondenceDistance(corrDistance);
+            icp.align(*unused_result, icpGuess);
+            if (icp.hasConverged() == false)
+                break;
+            icpGuess = icp.getFinalTransformation();
+        }
+
+        // Judge the alignment on inliers only. PCL's getFitnessScore() averages the squared
+        // distance over every source point, so the parts of the current scan that the history
+        // submap never covered dominate it: on an outdoor loop it stays above the threshold
+        // even when the overlapping part is aligned to a few centimetres, and no loop is ever
+        // accepted. Requiring a minimum inlier ratio keeps a small, accidentally tight overlap
+        // from passing.
+        int inlierCount = 0;
+        double inlierSqDistSum = 0.0;
+        if (icp.hasConverged())
+        {
+            pcl::PointCloud<PointType>::Ptr alignedCloud(new pcl::PointCloud<PointType>());
+            pcl::transformPointCloud(*cureKeyframeCloud, *alignedCloud, icp.getFinalTransformation());
+            auto targetTree = icp.getSearchMethodTarget();
+            const double inlierSqDist = loopClosureInlierDistance * loopClosureInlierDistance;
+            std::vector<int> nnIndex(1);
+            std::vector<float> nnSqDist(1);
+            for (const auto& point : alignedCloud->points)
+            {
+                if (targetTree->nearestKSearch(point, 1, nnIndex, nnSqDist) > 0 && nnSqDist[0] <= inlierSqDist)
+                {
+                    ++inlierCount;
+                    inlierSqDistSum += nnSqDist[0];
+                }
+            }
+        }
+        const double inlierRatio = double(inlierCount) / double(cureKeyframeCloud->size());
+        const double inlierMse = inlierCount > 0 ? inlierSqDistSum / inlierCount : std::numeric_limits<double>::max();
+        const bool accepted = icp.hasConverged() &&
+                              inlierRatio >= loopClosureMinInlierRatio &&
+                              inlierMse <= historyKeyframeFitnessScore;
+
+        const Eigen::Affine3f correctionLog(icp.getFinalTransformation());
+        float cx, cy, cz, croll, cpitch, cyaw;
+        pcl::getTranslationAndEulerAngles(correctionLog, cx, cy, cz, croll, cpitch, cyaw);
+        RCLCPP_INFO(get_logger(),
+            "Loop %d -> %d %s: inlier ratio %.2f (min %.2f), inlier MSE %.3f (max %.3f), "
+            "correction %.2f m / %.2f deg",
+            loopKeyCur, loopKeyPre, accepted ? "ACCEPTED" : "rejected",
+            inlierRatio, loopClosureMinInlierRatio,
+            inlierCount > 0 ? inlierMse : -1.0, historyKeyframeFitnessScore,
+            std::sqrt(cx * cx + cy * cy + cz * cz), cyaw * 180.0 / M_PI);
+
+        if (!accepted)
+        {
+            lastRejectedPair = std::make_pair(loopKeyCur, loopKeyPre);
             return;
+        }
 
         // publish corrected cloud
         if (pubIcpKeyFrames->get_subscription_count() != 0)
@@ -591,9 +655,15 @@ public:
         pcl::getTranslationAndEulerAngles (tCorrect, x, y, z, roll, pitch, yaw);
         gtsam::Pose3 poseFrom = Pose3(Rot3::RzRyRx(roll, pitch, yaw), Point3(x, y, z));
         gtsam::Pose3 poseTo = pclPointTogtsamPose3(copy_cloudKeyPoses6D->points[loopKeyPre]);
+        // ICP observes rotation through points spread over ~10 m, so its rotational variance
+        // (rad^2) is the translational one (m^2) divided by 10^2. The stock model used the
+        // fitness score for all six axes, which left the loop ~100x weaker in rotation than
+        // the accumulated odometry: positions were pulled together but the heading error
+        // stayed, and the two passes still did not overlap.
+        const double transVariance = std::max(inlierMse, 1e-3);
+        const double rotVariance = transVariance * 1e-2;
         gtsam::Vector Vector6(6);
-        float noiseScore = icp.getFitnessScore();
-        Vector6 << noiseScore, noiseScore, noiseScore, noiseScore, noiseScore, noiseScore;
+        Vector6 << rotVariance, rotVariance, rotVariance, transVariance, transVariance, transVariance;
         noiseModel::Diagonal::shared_ptr constraintNoise = noiseModel::Diagonal::Variances(Vector6);
 
         // Add pose constraint
@@ -1493,6 +1563,43 @@ public:
         loopPoseQueue.clear();
         loopNoiseQueue.clear();
         aLoopIsClosed = true;
+    }
+
+    // Accepted loops normally enter the graph with the next keyframe. When the bag ends
+    // shortly after the vehicle returns to its start, no further keyframe comes and the
+    // loop would never be applied, so the saved map would keep the misaligned ends.
+    // Runs on the executor thread (save_map service), like laserCloudInfoHandler.
+    void flushPendingLoopFactors()
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        if (loopIndexQueue.empty() || cloudKeyPoses3D->points.empty())
+            return;
+
+        RCLCPP_INFO(get_logger(), "Applying %zu pending loop closure(s) before saving the map",
+                    loopIndexQueue.size());
+        addLoopFactor();
+        isam->update(gtSAMgraph, initialEstimate);
+        for (int i = 0; i < 6; ++i)
+            isam->update();
+        gtSAMgraph.resize(0);
+        initialEstimate.clear();
+
+        isamCurrentEstimate = isam->calculateEstimate();
+        correctPoses();
+
+        // Keep scan-to-map tracking consistent in case more scans arrive afterwards.
+        const Pose3 latestEstimate = isamCurrentEstimate.at<Pose3>(isamCurrentEstimate.size() - 1);
+        transformTobeMapped[0] = latestEstimate.rotation().roll();
+        transformTobeMapped[1] = latestEstimate.rotation().pitch();
+        transformTobeMapped[2] = latestEstimate.rotation().yaw();
+        transformTobeMapped[3] = latestEstimate.translation().x();
+        transformTobeMapped[4] = latestEstimate.translation().y();
+        transformTobeMapped[5] = latestEstimate.translation().z();
+
+        // The lanelet bag records this path; publish the corrected one.
+        globalPath.header.stamp = timeLaserInfoStamp;
+        globalPath.header.frame_id = odometryFrame;
+        pubPath->publish(globalPath);
     }
 
     void saveKeyFramesAndFactor()
